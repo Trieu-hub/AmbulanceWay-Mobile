@@ -1,0 +1,395 @@
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+body {
+    background-color: #f4f6f9;
+    color: black;
+    font-family: "Segoe UI", Arial, sans-serif;
+    margin-bottom: 60px;
+    transition: 0.3s;
+}
+
+body.dark {
+    background-color: #121212;
+    color: white;
+}
+
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-logout {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    padding: 10px 16px;
+    background: #c62828;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 9999;
+}
+
+.btn-logout:hover {
+    background: #b71c1c;
+}
+
+#toggleTheme {
+    position: absolute;
+    top: 90px;
+    right: 20px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+body.dark #toggleTheme {
+    background: #333;
+    color: white;
+}
+
+#btnLocate {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    font-size: 20px;
+    padding: 0;
+}
+
+.leaflet-routing-container,
+.leaflet-routing-container * {
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.leaflet-routing-container {
+    position: relative;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+body.dark .leaflet-routing-container {
+    background: #1e1e1e !important;
+    color: white !important;
+}
+
+.leaflet-routing-container .leaflet-routing-collapse-btn {
+    display: none !important;
+}
+
+.route-info-box {
+    background: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    font-size: 15px;
+    font-weight: bold;
+    margin: 10px;
+}
+
+body.dark .route-info-box {
+    background: #1e1e1e;
+    color: white;
+}
+
+.form-control:focus,
+.form-check-input:focus,
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus {
+    box-shadow: 0 0 0 0.1rem #ffffff,
+                0 0 0 0.25rem #258cfb;
+}
+
+.form-floating > .form-control::placeholder,
+.form-floating > .form-control-plaintext::placeholder {
+    color: var(--bs-secondary-color);
+    text-align: end;
+}
+
+.form-floating > .form-control:focus::placeholder,
+.form-floating > .form-control-plaintext:focus::placeholder {
+    text-align: start;
+}
+.user-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.direction-arrow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 26px;
+    color: #1976d2;
+    transition: transform 0.2s linear;
+    z-index: 3;
+}
+
+.pulse {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(25, 118, 210, 0.3);
+    border-radius: 50%;
+    animation: radar 2s infinite;
+    z-index: 1;
+}
+
+@keyframes radar {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+    70% {
+        transform: scale(1.4);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+}
+
+body.dark .direction-arrow {
+    color: #4fc3f7;
+}
+
+body.dark .pulse {
+    background: rgba(79, 195, 247, 0.3);
+}
+.hospital-icon {
+    background: #e53935;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 3px solid white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+
+body.dark .hospital-icon {
+    background: #ff5252;
+    border: 3px solid #222;
+}
+.emergency-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.emergency-box {
+    background: white;
+    padding: 25px;
+    width: 350px;
+    border-radius: 12px;
+    text-align: center;
+    animation: popIn 0.3s ease;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+.emergency-box h2 {
+    color: red;
+}
+
+.btn-group {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.accept {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.reject {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.accept:hover { background: #218838; }
+.reject:hover { background: #c82333; }
+
+@keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.notification-bell {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+#badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    background: red;
+    color: white;
+    font-size: 13px;
+    padding: 3px 7px;
+    border-radius: 50%;
+}
+.status-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.status-available { background: #2e7d32; }
+.status-busy { background: #c62828; }
+.status-offline { background: #757575; }
+
+.emergency-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.emergency-box {
+    background: white;
+    width: 400px;
+    max-height: 80vh;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+#caseList {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.case-item {
+    background: #f5f5f5;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-left: 5px solid red;
+}
+.emergency-overlay {
+    display: none;
+}
+.case-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    color: white;
+}
+
+.level-critical { background: #d32f2f; }   
+.level-heavy { background: #f57c00; }      
+.level-medium { background: #fbc02d; color: black; }  
+.level-light { background: #388e3c; }      
+
+.notification-bell {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.notification-bell.shake {
+    animation: shake 0.6s;
+}
+
+@keyframes shake {
+    0% { transform: rotate(0); }
+    25% { transform: rotate(-15deg); }
+    50% { transform: rotate(15deg); }
+    75% { transform: rotate(-10deg); }
+    100% { transform: rotate(0); }
+}
+body {
+    position: relative;
+}
+
+.login-emergency-decor {
+    position: fixed;
+    top: 50%;
+    right: 8%;
+    transform: translateY(-50%);
+    width: 180px;
+    height: 180px;
+    z-index: 0;
+    opacity: 0.08;
+}
+
+.login-ring {
+    width: 180px;
+    height: 180px;
+    border: 10px solid rgba(255,0,0,0.15);
+    border-top: 10px solid #d32f2f;
+    border-radius: 50%;
+    animation: spinLogin 4s linear infinite;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.spin-icon {
+    display: inline-block;
+    font-size: 50px;  
+    animation: spinMini 1.5s linear infinite;
+}
+@keyframes spinLogin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+#toggleTheme {
+    margin-top: 25px;
+}

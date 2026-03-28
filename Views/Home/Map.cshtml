@@ -1,0 +1,556 @@
+@{
+    ViewData["Title"] = "Ambulance Map";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Ambulance Way</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        h2 { text-align: center; margin: 10px 0; }
+        #map { height: 100vh; width: 100%; }
+
+        button {
+            padding: 8px 16px;
+            background: #c62828;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover { background: #a91f1f; }
+
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        #toggleTheme {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        #toggleRoute {
+            width: 160px;
+        }
+
+        #btnLocate {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 22px;
+            padding: 0;
+        }
+
+        .leaflet-routing-container {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 280px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-size: 14px;
+            padding: 6px;
+            z-index: 900;
+        }
+
+        .route-info-box {
+            background: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            font-size: 14px;
+        }
+
+        body.dark {
+            background: #121212;
+            color: white;
+        }
+
+        body.dark .route-info-box,
+        body.dark .leaflet-routing-container {
+            background: #1e1e1e;
+            color: white;
+        }
+
+        body.dark button {
+            background: #333;
+        }
+
+        body.dark button:hover {
+            background: #444;
+        }
+
+        .user-wrapper {
+            position: relative;
+            width: 60px;
+            height: 60px;
+        }
+
+        .direction-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+            color: #1976d2;
+            transition: transform 0.2s linear;
+            z-index: 3;
+        }
+
+        .pulse {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(25, 118, 210, 0.3);
+            border-radius: 50%;
+            animation: radar 2s infinite;
+            z-index: 1;
+        }
+
+        @@keyframes radar {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            70% { transform: scale(1.4); opacity: 0.2; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        body.dark .direction-arrow {
+            color: #4fc3f7;
+        }
+
+        body.dark .pulse {
+            background: rgba(79,195,247,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<h2>🚑 AMBULANCE WAY</h2>
+
+<div class="emergency-overlay" id="emergencyOverlay">
+    <div class="emergency-box">
+        <h2>🚨 DANH SÁCH CẤP CỨU</h2>
+
+        <div id="caseList"></div>
+
+        <button onclick="closeEmergency()">ĐÓNG</button>
+    </div>
+</div>
+<script>
+let emergencyCases = [];
+
+function addEmergencyCase(name, location, level, lat, lng) {
+    emergencyCases.push({ name, location, level, lat, lng });
+    renderCases();
+
+    const bell = document.querySelector(".notification-bell");
+    bell.classList.add("shake");
+
+    setTimeout(() => {
+        bell.classList.remove("shake");
+    }, 600);
+}
+function renderCases() {
+    const list = document.getElementById("caseList");
+    const badge = document.getElementById("badge");
+
+    list.innerHTML = "";
+
+    emergencyCases.forEach((c, index) => {
+
+    let levelClass = "";
+
+    if (c.level === "Nguy kịch") levelClass = "level-critical";
+    else if (c.level === "Nặng") levelClass = "level-heavy";
+    else if (c.level === "Trung bình") levelClass = "level-medium";
+    else if (c.level === "Nhẹ") levelClass = "level-light";
+
+    list.innerHTML += `
+        <div class="case-item ${levelClass}">
+            <p><strong>${c.level}</strong></p>
+            <p>Bệnh nhân: ${c.name}</p>
+            <p>Địa điểm: ${c.location}</p>
+            <button onclick="acceptCase(${index})">
+                NHẬN CA
+            </button>
+        </div>
+    `;
+});
+
+    badge.innerText = emergencyCases.length;
+}
+function acceptCase(index) {
+
+    const selectedCase = emergencyCases[index];
+    currentCase = selectedCase;
+    driverStatus = "OnMission";
+    updateStatusUI(driverStatus);
+
+    if (!navigator.geolocation) {
+        alert("Trình duyệt không hỗ trợ GPS");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function (position) {
+
+        const userLocation = L.latLng(
+            position.coords.latitude,
+            position.coords.longitude
+        );
+
+        const emergencyLocation = L.latLng(
+            selectedCase.lat,
+            selectedCase.lng
+        );
+
+        if (routingControl) map.removeControl(routingControl);
+
+        routingControl = L.Routing.control({
+            waypoints: [userLocation, emergencyLocation],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false
+        }).addTo(map);
+
+        map.setView(userLocation, 15);
+
+    }, function (error) {
+        alert("Không lấy được vị trí: " + error.message);
+    });
+
+    alert("🚑 Đang dẫn đường tới " + selectedCase.location);
+
+    emergencyCases.splice(index, 1);
+    renderCases();
+    closeEmergency();
+}
+function showEmergency() {
+    document.getElementById("emergencyOverlay").style.display = "flex";
+}
+
+function closeEmergency() {
+    document.getElementById("emergencyOverlay").style.display = "none";
+}
+</script>
+<div class="notification-bell" onclick="showEmergency()">
+    🔔 <span id="badge">0</span>
+</div>
+<div class="top-controls">
+    <div id="driverStatusBtn" class="status-btn"></div>
+
+    <button id="toggleTheme">🌙</button>
+    <button id="toggleRoute" onclick="toggleRoutePanel()">✖ Ẩn chỉ đường</button>
+    <button onclick="endShift()" style="background:#444;">
+        🚪 Thoát ca
+    </button>
+</div>
+<button onclick="completeCase()" style="background:#2e7d32;">
+    ✅ Hoàn thành ca
+</button>
+
+<button id="btnLocate">📍</button>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<script>
+var lightLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+var darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+
+var map = L.map('map', {
+    center: [10.7769, 106.7009],
+    zoom: 13,
+    layers: [lightLayer]
+});
+
+var routingControl = null;
+var routeInfoControl = L.control({ position: 'topleft' });
+
+routeInfoControl.onAdd = function () {
+    this._div = L.DomUtil.create('div', 'route-info-box');
+    return this._div;
+};
+routeInfoControl.addTo(map);
+
+let hospitals = [];
+
+function addHospital(name, lat, lng) {
+    hospitals.push({ name, lat, lng });
+}
+let pointA = null;
+let pointB = null;
+let markerA = null;
+let markerB = null;
+let userMarker = null;
+let watchId = null;
+let currentCase = null;
+
+let driverStatus = "Available";
+
+function updateStatusUI(status) {
+    const btn = document.getElementById("driverStatusBtn");
+
+    btn.classList.remove(
+        "status-available",
+        "status-busy",
+        "status-offline"
+    );
+
+    if (status === "Available")
+        btn.classList.add("status-available");
+
+    if (status === "OnMission")
+        btn.classList.add("status-busy");
+
+    if (status === "Offline")
+        btn.classList.add("status-offline");
+}
+map.on('click', function (e) {
+
+    if (!pointA) {
+        pointA = e.latlng;
+        markerA = L.marker(pointA).addTo(map)
+            .bindPopup("🚑 Điểm A")
+            .openPopup();
+        return;
+    }
+    if (!pointB) {
+    pointB = e.latlng;
+
+    markerB = L.marker(pointB)
+        .addTo(map)
+        .bindPopup("Điểm B")
+        .openPopup();
+
+        if (routingControl) map.removeControl(routingControl);
+
+        routingControl = L.Routing.control({
+            waypoints: [pointA, pointB],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            createMarker: () => null
+        }).addTo(map);
+
+        routingControl.on('routesfound', function (e) {
+            var route = e.routes[0];
+            var time = Math.round(route.summary.totalTime / 60);
+            var distance = (route.summary.totalDistance / 1000).toFixed(1);
+            routeInfoControl._div.innerHTML =
+                "⏱ " + time + " phút | 📏 " + distance + " km";
+        fetch("/api/Trips", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            shiftStart: new Date().toISOString(),
+            shiftEnd: null,
+
+            incidentAddress: "Điểm A",
+            incidentLat: pointA.lat,
+            incidentLng: pointA.lng,
+
+            hospitalAddress: "Điểm B",
+            hospitalLat: pointB.lat,
+            hospitalLng: pointB.lng,
+
+            distanceKm: parseFloat(distance),
+            estimatedMinutes: time
+        })
+    })
+    .then(res => res.json())
+    .then(data => console.log("Saved:", data));       
+        });
+
+        return;
+    }
+
+    if (markerA) map.removeLayer(markerA);
+    if (markerB) map.removeLayer(markerB);
+    if (routingControl) map.removeControl(routingControl);
+
+    pointA = pointB = markerA = markerB = routingControl = null;
+    routeInfoControl._div.innerHTML = "";
+});
+
+function toggleRoutePanel() {
+    var panel = document.querySelector(".leaflet-routing-container");
+    var btn = document.getElementById("toggleRoute");
+    if (!panel) return;
+
+    if (panel.style.display === "none") {
+        panel.style.display = "block";
+        btn.innerText = "✖ Ẩn chỉ đường";
+    } else {
+        panel.style.display = "none";
+        btn.innerText = "🧭 Hiện chỉ đường";
+    }
+}
+
+document.getElementById("btnLocate").addEventListener("click", function () {
+
+    if (!navigator.geolocation) {
+        alert("Trình duyệt không hỗ trợ GPS");
+        return;
+    }
+
+    if (watchId !== null) return;
+
+    watchId = navigator.geolocation.watchPosition(function (position) {
+
+        var userLocation = L.latLng(
+            position.coords.latitude,
+            position.coords.longitude
+        );
+
+        var angle = position.coords.heading || 0;
+
+        map.setView(userLocation, 17);
+
+        if (!userMarker) {
+            userMarker = L.marker(userLocation, {
+                icon: L.divIcon({
+                    className: "user-wrapper",
+                    html: `
+                        <div class="pulse"></div>
+                        <div class="direction-arrow">▲</div>
+                    `,
+                    iconSize: [60, 60],
+                    iconAnchor: [30, 30]
+                })
+            }).addTo(map);
+        } else {
+            userMarker.setLatLng(userLocation);
+        }
+
+        var el = userMarker.getElement();
+        if (el) {
+            var arrow = el.querySelector(".direction-arrow");
+            if (arrow) {
+                arrow.style.transform =
+                    "translate(-50%, -50%) rotate(" + angle + "deg)";
+            }
+        }
+
+    }, function (error) {
+        alert("Không lấy được vị trí: " + error.message);
+    }, { enableHighAccuracy: true });
+});
+
+const toggleBtn = document.getElementById("toggleTheme");
+
+function applyTheme(theme) {
+    if (theme === "dark") {
+        document.body.classList.add("dark");
+        map.removeLayer(lightLayer);
+        map.addLayer(darkLayer);
+        toggleBtn.innerText = "☀️";
+    } else {
+        document.body.classList.remove("dark");
+        map.removeLayer(darkLayer);
+        map.addLayer(lightLayer);
+        toggleBtn.innerText = "🌙";
+    }
+    localStorage.setItem("theme", theme);
+}
+
+applyTheme(localStorage.getItem("theme") || "light");
+
+toggleBtn.addEventListener("click", function () {
+    applyTheme(document.body.classList.contains("dark") ? "light" : "dark");
+});
+function endShift() {
+    fetch("/Home/EndShift", {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            driverStatus = "Offline";
+            updateStatusUI(driverStatus);
+            alert("Đã kết thúc ca trực!");
+            window.location.href = "/Account/Login";
+        }
+    });
+}
+addEmergencyCase("Nguyễn Văn A", "Quận 1", "Nguy kịch", 10.7769, 106.7009);
+addEmergencyCase("Trần Văn B", "Quận 5", "Trung bình", 10.7553, 106.6660);
+addEmergencyCase("Lê Thị C", "Quận 3", "Nặng", 10.7840, 106.6860);
+addEmergencyCase("Phạm Văn D", "Quận 10", "Nguy kịch", 10.7745, 106.6670);
+addEmergencyCase("Hoàng Thị E", "Quận 7", "Nhẹ", 10.7342, 106.7218);
+addEmergencyCase("Võ Minh F", "Quận Bình Thạnh", "Trung bình", 10.8010, 106.7100);
+addEmergencyCase("Đặng Thị G", "Quận Phú Nhuận", "Nặng", 10.8003, 106.6800);
+addEmergencyCase("Bùi Văn H", "Quận Tân Bình", "Nguy kịch", 10.8015, 106.6520);
+addEmergencyCase("Ngô Thị I", "Quận 4", "Nhẹ", 10.7578, 106.7044);
+addEmergencyCase("Trịnh Văn K", "Quận 6", "Trung bình", 10.7480, 106.6350);
+
+addEmergencyCase("Lý Thị L", "Quận 8", "Nặng", 10.7240, 106.6300);
+addEmergencyCase("Phan Văn M", "Quận 12", "Nguy kịch", 10.8670, 106.6200);
+addEmergencyCase("Tô Thị N", "Quận Gò Vấp", "Trung bình", 10.8380, 106.6650);
+addEmergencyCase("Huỳnh Văn O", "Quận Tân Phú", "Nhẹ", 10.7900, 106.6300);
+addEmergencyCase("Mai Thị P", "Quận Bình Tân", "Nặng", 10.7650, 106.6000);
+addEmergencyCase("Đỗ Văn Q", "Quận 11", "Trung bình", 10.7630, 106.6500);
+addEmergencyCase("Lâm Thị R", "Quận 2", "Nguy kịch", 10.7870, 106.7490);
+addEmergencyCase("Châu Văn S", "Quận 9", "Nhẹ", 10.8420, 106.8280);
+addEmergencyCase("Nguyễn Thị T", "Quận Thủ Đức", "Nặng", 10.8500, 106.7600);
+addEmergencyCase("Trần Văn U", "Quận 1", "Trung bình", 10.7730, 106.6980);
+
+addHospital("Benh vien Cho Ray", 10.7570, 106.6600);
+addHospital("Benh vien Nhan Dan 115", 10.7680, 106.6605);
+addHospital("Benh vien Dai hoc Y Duoc", 10.7600, 106.6650);
+addHospital("Benh vien Gia Dinh", 10.8035, 106.7100);
+addHospital("Benh vien Quan 7", 10.7320, 106.7210);
+addHospital("Benh vien Thu Duc", 10.8490, 106.7600);
+addHospital("Benh vien Quan 12", 10.8675, 106.6205);
+addHospital("Benh vien Tan Phu", 10.7905, 106.6320);
+
+updateStatusUI(driverStatus);
+function completeCase() {
+
+    if (!currentCase) {
+        alert("Chưa có ca nào đang xử lý");
+        return;
+    }
+
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+
+    alert("🎉 Đã hoàn thành ca tại " + currentCase.location);
+
+    currentCase = null;
+    driverStatus = "Available";
+    updateStatusUI(driverStatus);
+}
+</script>
+
+</body>
+</html>

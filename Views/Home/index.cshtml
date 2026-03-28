@@ -1,0 +1,98 @@
+@{
+    ViewData["Title"] = "Ambulance Way";
+}
+
+<h2 class="map-title">🚑 AMBULANCE WAY</h2>
+
+
+<button class="btn-logout"
+        onclick="window.location.href='/Account/Logout'">
+    ⛔ Thoát ca
+</button>
+
+<button id="toggleRoute" onclick="toggleRoutePanel()">
+    ✖ Ẩn chỉ đường
+</button>
+
+<div id="map"></div>
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    var map = L.map('map').setView([10.7769, 106.7009], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    const toggleBtn = document.getElementById("toggleTheme");
+
+    let pointA = null;
+    let pointB = null;
+    let markerA = null;
+    let markerB = null;
+    let routingControl = null;
+
+    map.on('click', function (e) {
+
+        if (!pointA) {
+            pointA = e.latlng;
+            markerA = L.marker(pointA).addTo(map)
+                .bindPopup("🚑 Xe cấp cứu (A)").openPopup();
+            return;
+        }
+
+        if (!pointB) {
+            pointB = e.latlng;
+            markerB = L.marker(pointB).addTo(map)
+                .bindPopup("🏥 Bệnh viện (B)").openPopup();
+
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(pointA.lat, pointA.lng),
+                    L.latLng(pointB.lat, pointB.lng)
+                ],
+                routeWhileDragging: false,
+                show: true,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                createMarker: function () { return null; }
+            }).addTo(map);
+            return;
+        }
+
+        if (markerA) map.removeLayer(markerA);
+        if (markerB) map.removeLayer(markerB);
+        if (routingControl) map.removeControl(routingControl);
+
+        pointA = null;
+        pointB = null;
+        markerA = null;
+        markerB = null;
+        routingControl = null;
+    });
+
+});
+
+function toggleRoutePanel() {
+    var panel = document.querySelector(".leaflet-routing-container");
+    var btn = document.getElementById("toggleRoute");
+
+    if (!panel) return;
+
+    if (panel.style.display === "none" || panel.style.display === "") {
+        panel.style.display = "block";
+        btn.innerText = "✖ Ẩn chỉ đường";
+    } else {
+        panel.style.display = "none";
+        btn.innerText = "🧭 Hiện chỉ đường";
+    }
+}
+</script>
