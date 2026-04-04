@@ -17,7 +17,7 @@ namespace AmbulanceWay.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -36,7 +36,7 @@ namespace AmbulanceWay.Migrations
                         .HasDefaultValueSql("GETDATE()");
 
                     b.Property<decimal>("DistanceKm")
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("decimal(10,3)");
 
                     b.Property<int>("EstimatedMinutes")
                         .HasColumnType("int");
@@ -52,10 +52,10 @@ namespace AmbulanceWay.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<decimal>("HospitalLat")
-                        .HasColumnType("decimal(9,6)");
+                        .HasColumnType("decimal(10,7)");
 
                     b.Property<decimal>("HospitalLng")
-                        .HasColumnType("decimal(9,6)");
+                        .HasColumnType("decimal(10,7)");
 
                     b.Property<string>("IncidentAddress")
                         .IsRequired()
@@ -63,10 +63,10 @@ namespace AmbulanceWay.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<decimal>("IncidentLat")
-                        .HasColumnType("decimal(9,6)");
+                        .HasColumnType("decimal(10,7)");
 
                     b.Property<decimal>("IncidentLng")
-                        .HasColumnType("decimal(9,6)");
+                        .HasColumnType("decimal(10,7)");
 
                     b.Property<DateTime?>("ShiftEnd")
                         .HasColumnType("datetime2");
@@ -81,7 +81,10 @@ namespace AmbulanceWay.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("PENDING");
 
                     b.Property<string>("VehicleNo")
                         .IsRequired()
@@ -103,28 +106,77 @@ namespace AmbulanceWay.Migrations
 
                     b.Property<string>("DriverName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Station")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.Property<string>("Vehicle")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("Drivers");
+                });
+
+            modelBuilder.Entity("AmbulanceWay.Models.Hospital", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Lat")
+                        .HasColumnType("decimal(10,7)");
+
+                    b.Property<decimal>("Lng")
+                        .HasColumnType("decimal(10,7)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Type")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Hospitals");
                 });
 
             modelBuilder.Entity("AmbulanceWay.Models.User", b =>
@@ -135,27 +187,54 @@ namespace AmbulanceWay.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("SYSDATETIME()");
+
                     b.Property<bool>("IsOnline")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("Password");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("STAFF");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("ACTIVE");
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", null, t =>
+                        {
+                            t.Property("Password")
+                                .HasColumnName("Password1");
+                        });
                 });
 
             modelBuilder.Entity("AmbulanceWay.Models.Driver", b =>

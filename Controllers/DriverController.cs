@@ -16,15 +16,39 @@ namespace AmbulanceWay.Controllers
         [HttpPost]
         public IActionResult Update(Driver driver)
         {
-            _context.Update(driver);
+            if (driver == null)
+                return BadRequest();
+
+            var existing = _context.Drivers.Find(driver.Id);
+
+            if (existing == null)
+                return NotFound();
+
+            existing.DriverName = driver.DriverName;
+            existing.Phone = driver.Phone;
+            existing.Vehicle = driver.Vehicle;
+            existing.Station = driver.Station;
+
             _context.SaveChanges();
 
             return RedirectToAction("Profile", new { id = driver.Id });
         }
+
         public IActionResult Profile(int id)
-{
-    var driver = _context.Drivers.Find(id);
-    return View(driver);
-}
+        {
+            var driver = _context.Drivers.Find(id);
+
+            if (driver == null)
+                return NotFound();
+
+            var role = HttpContext.Session.GetInt32("ROLE");
+
+            if (role != null && role == 1)
+            {
+                return View("Edit", driver);
+            }
+
+            return View("Profile", driver);
+        }
     }
 }

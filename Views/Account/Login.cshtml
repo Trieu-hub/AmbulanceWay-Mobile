@@ -7,134 +7,121 @@
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
-    <title>AmbulanceWay</title>
+    <title>AmbulanceWay - Đăng nhập</title>
     <link rel="stylesheet" href="~/css/site.css" />
     <style>
         * { box-sizing: border-box; }
-
         body {
-            margin: 0;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(rgba(253,236,234,0.85), rgba(253,236,234,0.85)),
+            margin: 0; height: 100vh; font-family: Arial, sans-serif;
+            background: linear-gradient(rgba(253, 236, 234, 0.85), rgba(253, 236, 234, 0.85)),
                         url('/images/benhvien.jpg') no-repeat center / cover;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
-
         .login-box {
-            width: 420px;
-            background: #fff;
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+            width: 420px; background: #fff; padding: 32px;
+            border-radius: 12px; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
         }
-
-        .login-box h2 {
-            text-align: center;
-            margin-bottom: 16px;
-            color: #b71c1c;
-        }
-
+        .login-box h2 { text-align: center; margin-bottom: 16px; color: #b71c1c; }
         .form-group { margin-bottom: 14px; }
-
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
+        label { display: block; font-weight: bold; margin-bottom: 6px; }
+        .note { font-size: 0.8em; color: #666; font-weight: normal; }
+        input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
         button {
-            width: 100%;
-            margin-top: 18px;
-            padding: 12px;
-            background: #c62828;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
+            width: 100%; margin-top: 18px; padding: 12px; background: #c62828;
+            color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
         }
-
-        .error {
-            margin-top: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
+        button:hover { background: #b71c1c; }
+        .error { margin-top: 10px; text-align: center; font-weight: bold; min-height: 20px; }
     </style>
 </head>
-
 <body>
     <div class="login-box">
-        <h2 class="title">
-    AmbulanceWay 
-    <span class="spin-icon">🚨</span>
-</h2>
+        <h2>AmbulanceWay <span class="siren-icon">🚨</span></h2>
 
         <div class="form-group">
-            <label>Tên tài xế</label>
-            <input id="hospital">
+            <label>Tên đăng nhập</label>
+            <input id="txtUsername" placeholder="Nhập tài khoản...">
         </div>
 
         <div class="form-group">
-            <label>Trạm / Đơn vị cấp cứu</label>
-            <input id="staff">
+            <label>Mật khẩu</label>
+            <input type="password" id="txtPassword" placeholder="********">
         </div>
-        
+
+        <hr />
+
         <div class="form-group">
-            <label>Biển số xe</label>
-            <input id="vehicle">
+            <label>Trạm / Đơn vị cấp cứu <span class="note">(Dành cho tài xế)</span></label>
+            <input id="txtHospital" placeholder="Nhập tên bệnh viện/trạm...">
         </div>
-        <button type="button" onclick="login()">BẮT ĐẦU CA TRỰC</button>
+
+        <div class="form-group">
+            <label>Biển số xe <span class="note">(Dành cho tài xế)</span></label>
+            <input id="txtVehicle" placeholder="Ví dụ: 51G-123.45">
+        </div>
+
+        <button type="button" id="btnLogin" onclick="handleLogin()">BẮT ĐẦU CA TRỰC</button>
 
         <p id="msg" class="error"></p>
     </div>
 
-<script>
-function login() {
+    <script>
+        async function handleLogin() {
+            const username = document.getElementById("txtUsername").value.trim();
+            const password = document.getElementById("txtPassword").value.trim();
+            const hospital = document.getElementById("txtHospital").value.trim();
+            const vehicle = document.getElementById("txtVehicle").value.trim();
+            const msg = document.getElementById("msg");
 
-    const driverName = document.getElementById("hospital").value.trim();
-    const station = document.getElementById("staff").value.trim();
-    const vehicle = document.getElementById("vehicle").value.trim();
-    const msg = document.getElementById("msg");
+            if (!username || !password) {
+                showError("Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
+                return;
+            }
 
-    if (!driverName || !station || !vehicle) {
-        msg.style.color = "red";
-        msg.innerText = "Vui lòng nhập đầy đủ thông tin!";
-        return;
-    }
+            try {
+                // Bước 1: Đăng nhập tài khoản hệ thống (POST)
+                // Lưu ý: Gửi dưới dạng FormData để khớp với tham số (string username, string password) trong Controller
+                const formData = new FormData();
+                formData.append("username", username);
+                formData.append("password", password);
 
-    fetch("/Home/Login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: `driverName=${driverName}&station=${station}&vehicle=${vehicle}`
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            window.location.href = "/Home/Map";
-        } else {
-            msg.style.color = "red";
-            msg.innerText = data.message;
+                const loginRes = await fetch("/Account/Login", {
+                    method: "POST",
+                    body: formData 
+                });
+
+                const loginData = await loginRes.json();
+
+                if (loginData.success) {
+                    // Bước 2: Nếu là tài xế, lưu thông tin ca trực vào Session (LoginAjax)
+                    if (hospital || vehicle) {
+                        await fetch("/Account/LoginAjax", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                hospitalName: hospital,
+                                staffName: username, // Lấy username làm tên nhân viên trực
+                                vehicleNo: vehicle
+                            })
+                        });
+                    }
+
+                    // Bước 3: Chuyển hướng
+                    window.location.href = loginData.redirectUrl;
+                } else {
+                    showError(loginData.message);
+                }
+            } catch (err) {
+                showError("Không thể kết nối đến máy chủ!");
+                console.error(err);
+            }
         }
-    })
-    .catch(error => {
-        msg.style.color = "red";
-        msg.innerText = "Có lỗi xảy ra!";
-        console.log(error);
-    });
-}
-</script>
 
+        function showError(text) {
+            const msg = document.getElementById("msg");
+            msg.style.color = "red";
+            msg.innerText = text;
+        }
+    </script>
 </body>
 </html>

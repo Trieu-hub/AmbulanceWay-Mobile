@@ -10,15 +10,18 @@ namespace AmbulanceWay.Data
     {
         public AmbulanceWayDbContext CreateDbContext(string[] args)
         {
+            var basePath = Directory.GetCurrentDirectory();
+
             var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
+                .SetBasePath(basePath)
+                .AddJsonFile("appsettings.json", optional: false)
                 .Build();
 
             var optionsBuilder = new DbContextOptionsBuilder<AmbulanceWayDbContext>();
-            optionsBuilder.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection")
-            );
+
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+            optionsBuilder.UseSqlServer(connectionString);
 
             return new AmbulanceWayDbContext(optionsBuilder.Options);
         }

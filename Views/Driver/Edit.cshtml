@@ -1,0 +1,29 @@
+@model AmbulanceWay.Models.Driver
+
+<h2>Chỉnh sửa tài xế</h2>
+
+<form method="post" asp-action="Update">
+    <input type="hidden" asp-for="Id" />
+
+    <div>
+        <label>Tên tài xế</label>
+        <input asp-for="DriverName" />
+    </div>
+
+    <div>
+        <label>Số điện thoại</label>
+        <input asp-for="Phone" />
+    </div>
+
+    <div>
+        <label>Xe</label>
+        <input asp-for="Vehicle" />
+    </div>
+
+    <div>
+        <label>Trạm</label>
+        <input asp-for="Station" />
+    </div>
+
+    <button type="submit">💾 Lưu</button>
+</form>

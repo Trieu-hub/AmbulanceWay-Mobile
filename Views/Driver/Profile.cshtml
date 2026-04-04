@@ -2,7 +2,11 @@
 
 <h2>Thông tin tài xế</h2>
 
-<p>Tên tài xế: @Model.DriverName</p>
-<p>Trạm: @Model.Station</p>
-<p>Biển số xe: @Model.Vehicle</p>
+<p>Tên: @Model.DriverName</p>
 <p>SĐT: @Model.Phone</p>
+<p>Xe: @Model.Vehicle</p>
+<p>Trạm: @Model.Station</p>
+@if (Context.Session.GetInt32("ROLE") == 1)
+{
+    <a href="/Driver/Profile/@Model.Id">✏️ Chỉnh sửa</a>
+}

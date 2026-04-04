@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AmbulanceWay.Models
@@ -7,13 +8,19 @@ namespace AmbulanceWay.Models
     {
         public int Id { get; set; }
 
+        [Required]
         public string StaffName { get; set; } = null!;
+
+        [Required]
         public string Hospital { get; set; } = null!;
+
+        [Required]
         public string VehicleNo { get; set; } = null!;
 
         public DateTime ShiftStart { get; set; }
         public DateTime? ShiftEnd { get; set; }
 
+        [Required]
         public string IncidentAddress { get; set; } = null!;
 
         [Column(TypeName = "decimal(10,7)")]
@@ -22,6 +29,7 @@ namespace AmbulanceWay.Models
         [Column(TypeName = "decimal(10,7)")]
         public decimal IncidentLng { get; set; }
 
+        [Required]
         public string HospitalAddress { get; set; } = null!;
 
         [Column(TypeName = "decimal(10,7)")]
@@ -34,7 +42,9 @@ namespace AmbulanceWay.Models
         public decimal DistanceKm { get; set; }
 
         public int EstimatedMinutes { get; set; }
-        public string Status { get; set; } = "Pending";
-        public DateTime CreatedAt { get; set; }
+
+        public string Status { get; set; } = "PENDING";
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

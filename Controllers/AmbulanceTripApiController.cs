@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AmbulanceWay.Models;
-using AmbulanceWay.Data;  
+using AmbulanceWay.Data;
 
 namespace AmbulanceWay.Controllers
 {
@@ -15,51 +15,53 @@ namespace AmbulanceWay.Controllers
         {
             _context = context;
         }
+
         [HttpPost]
-public async Task<IActionResult> CreateTrip([FromBody] AmbulanceTrip trip)
-{
+        public async Task<IActionResult> CreateTrip([FromBody] AmbulanceTrip trip)
+        {
+            if (trip == null)
+                return BadRequest(new { message = "Invalid data" });
 
-    trip.StaffName = HttpContext.Session.GetString("STAFF") ?? "Unknown";
-    trip.Hospital = HttpContext.Session.GetString("HOSPITAL") ?? "Unknown";
-    trip.VehicleNo = HttpContext.Session.GetString("VEHICLE") ?? "Unknown";
+            trip.StaffName = HttpContext.Session.GetString("STAFF") ?? "Unknown";
+            trip.Hospital = HttpContext.Session.GetString("HOSPITAL") ?? "Unknown";
+            trip.VehicleNo = HttpContext.Session.GetString("VEHICLE") ?? "Unknown";
 
-    trip.CreatedAt = DateTime.Now;
-    var shiftStartStr = HttpContext.Session.GetString("SHIFT_START");
-    if (DateTime.TryParse(shiftStartStr, out DateTime shiftStart))
-    {
-        trip.ShiftStart = shiftStart;
-    }
-    else
-    {
-        trip.ShiftStart = DateTime.Now;
-    }
+            var shiftStartStr = HttpContext.Session.GetString("SHIFT_START");
+            if (DateTime.TryParse(shiftStartStr, out DateTime shiftStart))
+                trip.ShiftStart = shiftStart;
+            else
+                trip.ShiftStart = DateTime.Now;
 
-    trip.CreatedAt = DateTime.Now;
+            trip.CreatedAt = DateTime.Now;
 
-    _context.AmbulanceTrips.Add(trip);
-    await _context.SaveChangesAsync();
+            _context.AmbulanceTrips.Add(trip);
+            await _context.SaveChangesAsync();
 
-    return Ok(trip);
-}
+            return Ok(trip);
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetTrips()
         {
             return Ok(await _context.AmbulanceTrips.ToListAsync());
         }
-      [HttpPut("{id}/status")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
-    {
-        var trip = await _context.AmbulanceTrips.FindAsync(id);
 
-        if (trip == null)
-            return NotFound(new { message = "Trip not found" });
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
+        {
+            var trip = await _context.AmbulanceTrips.FindAsync(id);
 
-        trip.Status = newStatus;
+            if (trip == null)
+                return NotFound(new { message = "Trip not found" });
 
-        await _context.SaveChangesAsync();
+            if (string.IsNullOrWhiteSpace(newStatus))
+                return BadRequest(new { message = "Invalid status" });
 
-        return Ok(new { success = true });
-    }
+            trip.Status = newStatus;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
     }
 }

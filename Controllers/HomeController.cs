@@ -14,16 +14,19 @@ namespace AmbulanceWay.Controllers
         {
             _context = context;
         }
+
+        // Helper check session để code gọn hơn
+        private string? CurrentUser => HttpContext.Session.GetString("USERNAME");
+
         public async Task<IActionResult> Index()
         {
-            var driver = HttpContext.Session.GetString("DriverName");
-            if (string.IsNullOrEmpty(driver))
-            {
+            if (string.IsNullOrEmpty(CurrentUser))
                 return RedirectToAction("Login", "Account");
-            }
 
+            // Lấy danh sách chuyến đi, sắp xếp mới nhất
             var trips = await _context.AmbulanceTrips
                 .AsNoTracking()
+                .OrderByDescending(t => t.Id)
                 .Take(100)
                 .ToListAsync();
 
@@ -32,94 +35,110 @@ namespace AmbulanceWay.Controllers
 
         public IActionResult Map()
         {
-            var driver = HttpContext.Session.GetString("DriverName");
-
-            if (driver == null)
-            {
-                 return RedirectToAction("Index");
-            }
+            if (string.IsNullOrEmpty(CurrentUser))
+                return RedirectToAction("Login", "Account");
 
             return View();
         }
-        [HttpPost]
-        public async Task<IActionResult> Register(string username, string password)
-        {
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-                return Json(new { success = false, message = "Thiếu thông tin" });
 
-            var user = await _context.Users
-                .FirstOrDefaultAsync(x => x.Username == username);
+        [HttpPost]
+        public async Task<IActionResult> Login([FromBody] LoginRequest model) 
+        {
+            if (model == null || string.IsNullOrEmpty(model.Username))
+                return Json(new { success = false, message = "Vui lòng nhập tên tài khoản!" });
+
+            // 1. Tìm User (Dùng User? để hết báo lỗi CS8600)
+            User? user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Username == model.Username);
+
+            // 2. Nếu chưa có thì tự động tạo tài khoản (Role: STAFF theo SQL của bạn)
             if (user == null)
             {
                 user = new User
                 {
-                    Username = username,
-                    PasswordHash = password,
-                    RoleId = 1
+                    Username = model.Username,
+                    PasswordHash = "default", // Cột này sẽ tự ánh xạ vào cột 'Password' trong SQL
+                    Role = "STAFF",           // Khớp với DEFAULT 'STAFF' trong SQL của bạn
+                    Status = "ACTIVE",
+                    IsOnline = true,
+                    CreatedAt = DateTime.Now 
                 };
 
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
             }
+
+            // 3. Kiểm tra trạng thái
+            if (user.Status != "ACTIVE")
+                return Json(new { success = false, message = "Tài khoản đang bị khóa!" });
+
+            // 4. Lưu Session (Lưu ý: Role là chuỗi "ADMIN" hoặc "STAFF")
+            HttpContext.Session.SetString("USERNAME", user.Username);
+            HttpContext.Session.SetString("ROLE", user.Role);
+
+            if (user.Role == "STAFF") // Nếu là tài xế
+            {
+                HttpContext.Session.SetString("STATION", model.Station ?? "N/A");
+                HttpContext.Session.SetString("VEHICLE", model.Vehicle ?? "N/A");
+                HttpContext.Session.SetString("SHIFT_START", DateTime.Now.ToString("HH:mm dd/MM/yyyy"));
+            }
+
+            // 5. Điều hướng dựa trên Role chuỗi
+            string? redirectUrl = user.Role.ToUpper() == "ADMIN"
+                ? Url.Action("Index", "Admin")
+                : Url.Action("Index", "Home");
+
+            return Json(new { success = true, redirectUrl });
+        }
+
+        [HttpPost]
+        public IActionResult EndShift()
+        {
+            HttpContext.Session.Clear();
             return Json(new { success = true });
         }
-        [HttpPost]
-public async Task<IActionResult> Login(string driverName, string station, string vehicle)
-{
-    if (string.IsNullOrEmpty(driverName) 
-        || string.IsNullOrEmpty(station) 
-        || string.IsNullOrEmpty(vehicle))
-    {
-        return Json(new { success = false, message = "Thiếu thông tin" });
-    }
 
-    var user = await _context.Users
-        .FirstOrDefaultAsync(x =>
-            x.Username == driverName &&
-            x.PasswordHash == station);
-
-    if (user == null)
-    {
-        user = new User
+        [HttpGet]
+        public async Task<IActionResult> GetNearestHospital(double lat, double lng)
         {
-            Username = driverName,
-            PasswordHash = station,
-            RoleId = 1,
-            Status = "ACTIVE",
-            IsOnline = true
-        };
+            // Tối ưu truy vấn: Chỉ lấy những cột cần thiết
+            var hospitals = await _context.Hospitals
+                .AsNoTracking()
+                .ToListAsync();
+            
+            if (!hospitals.Any()) return Json(null);
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-    }
+            var nearest = hospitals.Select(h => new
+                {
+                    h.Id,
+                    h.Name,
+                    h.Address,
+                    Distance = 6371 * Math.Acos(
+                        Math.Cos(Math.PI * lat / 180) *
+                        Math.Cos(Math.PI * (double)h.Lat / 180) *
+                        Math.Cos(Math.PI * ((double)h.Lng - lng) / 180) +
+                        Math.Sin(Math.PI * lat / 180) *
+                        Math.Sin(Math.PI * (double)h.Lat / 180)
+                    )
+                })
+                .OrderBy(h => h.Distance)
+                .FirstOrDefault();
 
-    if (user.Status != "ACTIVE")
-    {
-        return Json(new { success = false, message = "Tài khoản bị khóa hoặc chưa duyệt!" });
-    }
-
-    HttpContext.Session.SetString("DriverName", user.Username);
-    HttpContext.Session.SetString("Vehicle", vehicle);
-
-    return Json(new { success = true });
-}
-        [HttpPost]
-       public IActionResult EndShift()
-       {
-       return Json(new { success = true });
-       }
-        public IActionResult Privacy()
-        {
-            return View();
+            return Json(nearest);
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel
-            {
-                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
-            });
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+    }
+
+    public class LoginRequest
+    {
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public string? Station { get; set; }
+        public string? Vehicle { get; set; }
     }
 }
