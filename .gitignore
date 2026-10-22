@@ -4,3 +4,16 @@ obj/
 *.log
 *.exe
 *.dll
+
+# Visual Studio / IDE
+.vs/
+
+# Flutter app
+mobile/build/
+mobile/.dart_tool/
+
+# Tài liệu môn học (không đưa lên Git)
+/*.docx
+/*.pdf
+SQLQuery1.sql
+.vscode/
