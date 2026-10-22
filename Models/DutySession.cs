@@ -1,18 +1,29 @@
 using System.ComponentModel.DataAnnotations;
 
-public class DutySession
+namespace AmbulanceWay.Models
 {
-    [Required]
-    [MaxLength(200)]
-    public string HospitalName { get; set; } = null!;
+    public class DutySession
+    {
+        [Key]
+        public int Id { get; set; }
 
-    [Required]
-    [MaxLength(100)]
-    public string StaffName { get; set; } = null!;
+        [Required]
+        [MaxLength(200)]
+        public string HospitalName { get; set; } = null!; // Trạm trực
 
-    [Required]
-    [MaxLength(20)]
-    public string Phone { get; set; } = null!;
+        [Required]
+        [MaxLength(100)]
+        public string StaffName { get; set; } = null!; // Tên tài xế
 
-    public DateTime StartTime { get; set; } = DateTime.Now;
+        [Required]
+        [MaxLength(20)]
+        public string VehicleNo { get; set; } = null!; // Biển số xe (Thêm mới)
+
+        [Required]
+        public string Username { get; set; } = null!; // Để biết tài khoản nào đang trực
+
+        public DateTime StartTime { get; set; } = DateTime.Now;
+        
+        public DateTime? EndTime { get; set; } // Để sau này làm chức năng "Kết thúc ca"
+    }
 }

@@ -1,0 +1,36 @@
+@hostname = localhost
+@port = 5199
+@host = http://{{hostname}}:{{port}}
+@contentType = application/json
+
+### 1. Đăng nhập để lấy JWT Token
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "admin",
+    "password": "123"
+}
+
+#### SAU KHI CHẠY XONG BƯỚC 1, COPY CHUỖI TOKEN TRONG PHẦN PHẢN HỒI VÀ DÁN VÀO ĐÂY ####
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBRE1JTiIsIlVzZXJJZCI6IjIiLCJTdGF0dXMiOiJBQ1RJVkUiLCJleHAiOjE3NzgwNTgxMzgsImlzcyI6IkFtYnVsYW5jZVdheSIsImF1ZCI6IkFtYnVsYW5jZVdheU1vYmlsZSJ9.NT4L0JYPDahzxw0qQwEPXkHbAMQpVq0h6cWeSuBdoR0
+
+### 2. Lấy thông tin tài xế hiện tại
+GET {{host}}/api/driverapi/me
+Authorization: Bearer {{token}}
+
+### 3. Đăng ký bắt đầu ca trực
+POST {{host}}/api/duty/start
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+    "hospitalName": "BV Bạch Mai",
+    "staffName": "Nguyễn Văn A",
+    "vehicleNo": "29A-12345"
+}
+
+### 4. Tìm bệnh viện gần nhất
+GET {{host}}/api/hospitals/nearby?lat=21.028&lng=105.854
+Authorization: Bearer {{token}}

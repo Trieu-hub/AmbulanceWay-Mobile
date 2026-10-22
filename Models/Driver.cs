@@ -25,6 +25,10 @@ namespace AmbulanceWay.Models
         [MaxLength(20)]
         public string Phone { get; set; } = null!;
 
+        [Required]
+        [MaxLength(50)]
+        public string LicenseNo { get; set; } = null!;
+
         [MaxLength(20)]
         public string Status { get; set; } = "ONLINE";
 

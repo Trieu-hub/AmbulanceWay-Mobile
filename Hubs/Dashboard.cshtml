@@ -1,0 +1,182 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Hospital Dashboard";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Cột trái: Thông tin trạng thái bệnh viện -->
+        <div class="col-md-3">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-hospital"></i> Trạng thái BV</h5>
+                </div>
+                <div class="card-body">
+                    <h4 id="hospitalName" class="text-primary">---</h4>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Giường cấp cứu trống:</label>
+                        <input type="number" id="availableBeds" class="form-control form-control-lg text-center fw-bold" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Trạng thái tiếp nhận:</label>
+                        <select id="receptionStatus" class="form-select">
+                            <option value="OPEN">Mở cửa (OPEN)</option>
+                            <option value="FULL">Đầy bệnh nhân (FULL)</option>
+                            <option value="CLOSED">Tạm đóng (CLOSED)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success w-100" onclick="updateCapacity()">
+                        <i class="fas fa-save"></i> Cập nhật ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: Danh sách ca đang đến -->
+        <div class="col-md-9">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-ambulance"></i> Ca cấp cứu đang đến (Real-time)</h5>
+                    <span class="badge bg-light text-danger" id="pendingCount">0 ca</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bệnh nhân</th>
+                                <th>Loại cấp cứu</th>
+                                <th>Tài xế / Xe</th>
+                                <th>ETA (Dự kiến)</th>
+                                <th class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingList">
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">Đang đợi dữ liệu...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xác nhận tiếp nhận -->
+<div class="modal fade" id="respondModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận tiếp nhận bệnh nhân</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vui lòng chỉ định khu vực/phòng cho tài xế <strong id="modalDriver"></strong>:</p>
+                <input type="text" id="assignRoom" class="form-control mb-3" placeholder="Ví dụ: Phòng cấp cứu số 2, Khu A...">
+                
+                <div id="rejectSection" style="display:none;">
+                    <label class="form-label text-danger">Lý do từ chối:</label>
+                    <select id="rejectReason" class="form-select">
+                        <option value="FULL_BEDS">Hết giường cấp cứu</option>
+                        <option value="NO_SPECIALIST">Thiếu bác sĩ chuyên khoa</option>
+                        <option value="MAINTENANCE">Đang bảo trì thiết bị</option>
+                        <option value="OTHER">Lý do khác</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="btnToggleReject" onclick="toggleReject(true)">Từ chối ca này</button>
+                <button type="button" class="btn btn-primary" onclick="submitResponse('CONFIRMED')">Xác nhận & Gửi tài xế</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+    <script>
+        let currentNotifId = null;
+        let currentDriverUsername = null;
+        let hospitalId = null;
+
+        async function loadDashboard() {
+            const res = await fetch('/api/HospitalPortal/dashboard');
+            const data = await res.json();
+            
+            hospitalId = data.hospital.id;
+            document.getElementById('hospitalName').innerText = data.hospital.name;
+            document.getElementById('availableBeds').value = data.hospital.availableEmergencyBeds;
+            document.getElementById('receptionStatus').value = data.hospital.receptionStatus;
+            
+            renderPendingList(data.pendingNotifications);
+            initSignalR();
+        }
+
+        function renderPendingList(list) {
+            const tbody = document.getElementById('pendingList');
+            document.getElementById('pendingCount').innerText = `${list.length} ca`;
+            
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Hiện không có ca nào đang đến.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(n => `
+                <tr class="table-warning">
+                    <td><strong>${n.patientName}</strong><br><small class="text-muted">${n.patientPhone}</small></td>
+                    <td><span class="badge bg-danger">${n.emergencyType}</span></td>
+                    <td>${n.driverName}<br><code class="text-dark">${n.vehicleNo}</code></td>
+                    <td><span class="text-primary fw-bold"><i class="fas fa-clock"></i> ~${n.etaMinutes} phút</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-success" onclick="openRespondModal(${n.id}, '${n.driverName}')">Xử lý</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function initSignalR() {
+            const connection = new signalR.HubConnectionBuilder().withUrl("/ambulanceHub").build();
+
+            connection.on("ReceiveIncomingPatient", (data) => {
+                alert("CẢNH BÁO: Có ca cấp cứu mới đang đến!");
+                loadDashboard(); // Refresh list
+            });
+
+            connection.start().then(() => {
+                connection.invoke("RegisterHospital", hospitalId);
+            });
+        }
+
+        function openRespondModal(id, driver) {
+            currentNotifId = id;
+            currentDriverUsername = driver; // Lưu ý: thực tế nên dùng username ẩn trong data
+            document.getElementById('modalDriver').innerText = driver;
+            new bootstrap.Modal(document.getElementById('respondModal')).show();
+        }
+
+        function toggleReject(show) {
+            document.getElementById('rejectSection').style.display = show ? 'block' : 'none';
+            document.getElementById('assignRoom').disabled = show;
+            if(show) {
+                const btn = document.getElementById('btnToggleReject');
+                btn.innerText = "Xác nhận Từ chối";
+                btn.className = "btn btn-danger";
+                btn.onclick = () => submitResponse('REJECTED');
+            }
+        }
+
+        async function submitResponse(status) {
+            const room = document.getElementById('assignRoom').value;
+            const reason = document.getElementById('rejectReason').value;
+            await fetch(`/api/HospitalPortal/notifications/${currentNotifId}/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, room, rejectReason: reason, driverUsername: currentDriverUsername })
+            });
+            location.reload();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+}

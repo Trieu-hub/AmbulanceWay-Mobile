@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AmbulanceWay.Models
 {
-    [Table("Users")] // Đảm bảo EF Core tìm đúng bảng Users
+    [Table("Users")]
     public class User
     {
         [Key]
@@ -13,14 +13,11 @@ namespace AmbulanceWay.Models
         [StringLength(50)]
         public string Username { get; set; } = string.Empty;
 
+        // Chỉ nên giữ 1 cái để tránh bối rối khi code Controller
         [Required]
         [StringLength(255)]
+        [Column("Password")] // Chỉ định rõ tên cột trong SQL là Password
         public string Password { get; set; } = string.Empty;
-
-        // Lưu ý: Trong SQL bạn để Password, nhưng trong Controller bạn dùng PasswordHash.
-        // Nếu dùng PasswordHash trong code thì đổi tên cột này lại cho khớp hoặc dùng [Column("Password")]
-        [Column("Password")]
-        public string PasswordHash { get; set; } = string.Empty;
 
         [StringLength(20)]
         public string Role { get; set; } = "STAFF";
