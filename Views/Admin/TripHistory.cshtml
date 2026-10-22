@@ -1,0 +1,398 @@
+@{
+    ViewData["Title"] = "Lịch sử chuyến đi & Thống kê";
+}
+
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        text-align: center;
+    }
+    .stats-card h3 {
+        color: #d32f2f;
+        font-size: 2rem;
+        margin: 0;
+    }
+    .stats-card p {
+        color: #666;
+        margin: 5px 0 0;
+        font-size: 0.9rem;
+    }
+    .stats-icon {
+        font-size: 2rem;
+        color: #d32f2f;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="container mt-4">
+
+    <h2 class="text-danger fw-bold mb-4">
+        <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử chuyến đi & Thống kê
+    </h2>
+
+    <!-- Toast notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-check-circle me-2"></i>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-exclamation-circle me-2"></i>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Stats Dashboard -->
+    <div class="row mb-4" id="statsDashboard">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <h3 id="totalTrips">0</h3>
+                <p>Tổng số chuyến</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon"><i class="fa-solid fa-road"></i></div>
+                <h3 id="totalDistance">0 km</h3>
+                <p>Tổng quãng đường</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon"><i class="fa-solid fa-clock"></i></div>
+                <h3 id="avgDuration">0 phút</h3>
+                <p>Thời gian TB</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon"><i class="fa-solid fa-hospital"></i></div>
+                <h3 id="topHospital">-</h3>
+                <p>BV được chọn nhiều nhất</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Lists -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <i class="fa-solid fa-trophy"></i> Top 5 Bệnh viện được chọn
+                </div>
+                <ul class="list-group list-group-flush" id="topHospitalsList">
+                    <li class="list-group-item text-center text-muted">Đang tải...</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="fa-solid fa-id-card"></i> Top 5 Tài xế hoạt động
+                </div>
+                <ul class="list-group list-group-flush" id="topDriversList">
+                    <li class="list-group-item text-center text-muted">Đang tải...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & List -->
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <i class="fa-solid fa-list"></i> Danh sách chuyến đi
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
+                <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
+                <input type="text" id="searchKeyword" class="form-control form-control-sm" placeholder="Tìm kiếm..." style="width: 160px;">
+                <button class="btn btn-sm btn-outline-danger" onclick="filterTrips()">
+                    <i class="fa-solid fa-filter"></i> Lọc
+                </button>
+                <button class="btn btn-sm btn-success" onclick="exportCSV()">
+                    <i class="fa-solid fa-download"></i> CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Tài xế</th>
+                        <th>Biển số</th>
+                        <th>Bệnh viện</th>
+                        <th>Địa điểm bệnh nhân</th>
+                        <th>Km</th>
+                        <th>Phút</th>
+                        <th>Trạng thái</th>
+                        <th>Đánh giá</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="tripListBody">
+
+                    <tr id="loadingRow">
+                        <td colspan="9" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-danger" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                            <p class="mt-2 text-muted small">Đang tải danh sách chuyến đi...</p>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted" id="pageInfo">Trang 1</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" id="prevPage" onclick="changePage(-1)">Trước</button>
+                <button class="btn btn-sm btn-outline-secondary" id="nextPage" onclick="changePage(1)">Sau</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // API trả tên trường PascalCase (Id, DriverName...) còn mã bên dưới đọc camelCase (id, driverName...)
+    const toCamel = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), v]));
+    // Dòng 'đang tải' nằm trong tbody nên bị xóa khi vẽ bảng: bỏ qua nếu không còn
+    const setLoadingRow = display => { const row = document.getElementById('loadingRow'); if (row) row.style.display = display; };
+    let currentPage = 1;
+    const pageSize = 20;
+
+    // Minimal toast helper for this page
+    function showToast(message, type = 'info') {
+        const toastEl = document.createElement('div');
+        const bg = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-secondary');
+        toastEl.className = `toast ${bg} text-white align-items-center position-fixed top-0 end-0 m-3 border-0`;
+        toastEl.style.zIndex = '2000';
+        toastEl.role = 'alert';
+        toastEl.innerHTML = `<div class="toast-body">${message}</div>`;
+        document.body.appendChild(toastEl);
+        const t = new bootstrap.Toast(toastEl, { delay: 2500 });
+        t.show();
+        setTimeout(() => toastEl.remove(), 2600);
+    }
+
+    // 1. Load stats dashboard
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/TripHistory/stats');
+            const stats = await res.json();
+
+            document.getElementById('totalTrips').innerText = stats.totalTrips;
+            document.getElementById('totalDistance').innerText = stats.totalDistanceKm + ' km';
+            document.getElementById('avgDuration').innerText = stats.avgDurationMinutes + ' phút';
+            
+            if (stats.topHospitals && stats.topHospitals.length > 0) {
+                document.getElementById('topHospital').innerText = stats.topHospitals[0].hospitalName;
+            }
+
+            // Top hospitals
+            let html = '';
+            stats.topHospitals.forEach((h, i) => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><strong>${i+1}.</strong> ${h.hospitalName}</span>
+                    <span class="badge bg-danger rounded-pill">${h.count}</span>
+                </li>`;
+            });
+            document.getElementById('topHospitalsList').innerHTML = html || '<li class="list-group-item text-muted">Chưa có dữ liệu</li>';
+
+            // Top drivers
+            html = '';
+            stats.topDrivers.forEach((d, i) => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><strong>${i+1}.</strong> ${d.driverName}</span>
+                    <span class="badge bg-primary rounded-pill">${d.count}</span>
+                </li>`;
+            });
+            document.getElementById('topDriversList').innerHTML = html || '<li class="list-group-item text-muted">Chưa có dữ liệu</li>';
+
+        } catch (err) {
+            console.error('Load stats error:', err);
+        }
+    }
+
+    // 2. Load trip list
+
+    async function loadTrips(page = 1) {
+        setLoadingRow('table-row');
+        try {
+            const res = await fetch(`/api/TripHistory?page=${page}&pageSize=${pageSize}`);
+
+            const result = await res.json();
+            result.data = (result.data || []).map(toCamel);
+
+            let html = '';
+            if (result.data.length === 0) {
+                html = '<tr><td colspan="10" class="text-center text-muted">Chưa có chuyến đi nào</td></tr>';
+            } else {
+                result.data.forEach(t => {
+                    const statusBadge = t.tripStatus === 'COMPLETED' 
+                        ? '<span class="badge bg-success">Hoàn thành</span>'
+                        : '<span class="badge bg-warning">Đang chờ</span>';
+                    
+                    const date = new Date(t.createdAt);
+                    const dateStr = !isNaN(date.getTime()) 
+                        ? date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : t.createdAt;
+
+                    html += `
+                    <tr>
+                        <td>#${t.id}</td>
+                        <td>${t.driverName}</td>
+                        <td><code>${t.vehicleNo}</code></td>
+                        <td>${t.hospitalName}</td>
+                        <td>${t.patientAddress}</td>
+                        <td>${t.distanceKm} km</td>
+                        <td>${t.durationMinutes} phút</td>
+                        <td>${statusBadge}</td>
+                        <td>${t.overallRating ? `<span class="badge bg-success">⭐ ${t.overallRating}/5</span>` : '<span class="text-muted">—</span>'}</td>
+                        <td><small>${dateStr}</small></td>
+                    </tr>`;
+                });
+            }
+
+
+            document.getElementById('tripListBody').innerHTML = html;
+            document.getElementById('pageInfo').innerText = `Trang ${result.page} / Tổng ${Math.ceil(result.total / pageSize)} trang`;
+
+            // Update pagination buttons
+            document.getElementById('prevPage').disabled = result.page <= 1;
+            document.getElementById('nextPage').disabled = result.page * pageSize >= result.total;
+
+            currentPage = result.page;
+            setLoadingRow('none');
+
+
+
+        } catch (err) {
+            console.error('Load trips error:', err);
+            document.getElementById('tripListBody').innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4"><i class="fa-solid fa-exclamation-triangle fa-2x mb-2 d-block"></i><p class="mb-0">Không thể tải danh sách!<br><small>Thử lại hoặc kiểm tra kết nối</small></p></td></tr>';
+            setLoadingRow('none');
+            showToast('Lỗi tải dữ liệu chuyến đi', 'error');
+        }
+    }
+
+
+    // 3. Search
+
+    async function searchTrips() {
+        const keyword = document.getElementById('searchKeyword').value.trim();
+        if (!keyword) {
+            loadTrips(1);
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/TripHistory/search?keyword=${encodeURIComponent(keyword)}`);
+            // API tìm kiếm trả { data, total, page, pageSize } chứ không phải mảng
+            const data = ((await res.json()).data || []).map(toCamel);
+
+            let html = '';
+            if (data.length === 0) {
+                html = '<tr><td colspan="10" class="text-center text-muted py-4"><i class="fa-solid fa-search fa-2x mb-2 d-block text-muted"></i><p class="mb-0">Không tìm thấy kết quả nào cho "${keyword}"</p></td></tr>';
+            } else {
+                data.forEach(t => {
+                    const statusBadge = t.tripStatus === 'COMPLETED' 
+                        ? '<span class="badge bg-success">Hoàn thành</span>'
+                        : '<span class="badge bg-warning">Đang chờ</span>';
+
+                    html += `
+                    <tr>
+                        <td>#${t.id}</td>
+                        <td>${t.driverName}</td>
+                        <td><code>${t.vehicleNo}</code></td>
+                        <td>${t.hospitalName}</td>
+                        <td>${t.patientAddress}</td>
+                        <td>${t.distanceKm} km</td>
+                        <td>${t.durationMinutes} phút</td>
+                        <td>${statusBadge}</td>
+                        <td>${t.overallRating ? `<span class="badge bg-success">⭐ ${t.overallRating}/5</span>` : '<span class="text-muted">—</span>'}</td>
+                        <td><small>${t.createdAt}</small></td>
+                    </tr>`;
+                });
+            }
+
+            document.getElementById('tripListBody').innerHTML = html;
+            document.getElementById('pageInfo').innerText = `Tìm thấy ${data.length} kết quả`;
+
+        } catch (err) {
+            console.error('Search error:', err);
+            showToast('Lỗi tìm kiếm', 'error');
+        }
+    }
+
+    // Filter function (date + keyword)
+    async function filterTrips() {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const keyword = document.getElementById('searchKeyword').value.trim();
+        
+        // Client-side for now, later backend
+        loadTrips(1); // Placeholder
+        showToast('Tính năng lọc đang được cập nhật...', 'info');
+    }
+
+    // CSV export (client-side)
+    function exportCSV() {
+        const rows = document.querySelectorAll('#tripListBody tr');
+        let csv = 'ID,Tài xế,Biển số,Bệnh viện,Địa điểm,Km,Phút,Trạng thái,Thời gian\n';
+        
+        rows.forEach(row => {
+            const cols = row.querySelectorAll('td');
+            if (cols.length === 9) {
+                const data = Array.from(cols).map(col => col.textContent.trim().replace(/,/g, ' '));
+                csv += data.join(',') + '\n';
+            }
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trip_history_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showToast('Đã tải file CSV!', 'success');
+    }
+
+
+    // 4. Change page
+    function changePage(delta) {
+        loadTrips(currentPage + delta);
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStats();
+        loadTrips(1);
+
+        // Enter key search
+        document.getElementById('searchKeyword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchTrips();
+        });
+    });
+</script>
+}

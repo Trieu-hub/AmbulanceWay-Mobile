@@ -1,0 +1,369 @@
+@{
+    ViewData["Title"] = "Hồ sơ cấp cứu";
+    Layout = "_PublicLayout";
+}
+
+<style>
+    body.aw-public { background: #fff; }
+    .pr-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); min-height: 100vh; }
+
+    .pr-hero {
+        position: relative; overflow: hidden; color: #fff; padding: 48px 56px; display: flex; flex-direction: column;
+        background: radial-gradient(circle at 20% 15%, #ff6b61 0%, #e53935 38%, #8e1515 100%);
+    }
+    .pr-hero::after {
+        content: ""; position: absolute; width: 520px; height: 520px; right: -180px; bottom: -200px; border-radius: 50%;
+        border: 70px solid rgba(255, 255, 255, .06);
+    }
+    .pr-brand { display: flex; align-items: center; gap: 12px; color: #fff; text-decoration: none; font-weight: 800; font-size: 1.1rem; }
+    .pr-brand .aw-brand-mark { background: rgba(255, 255, 255, .16); box-shadow: none; }
+    .pr-hero h1 { font-size: clamp(2rem, 3.4vw, 3rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.08; margin: auto 0 16px; max-width: 520px; }
+    .pr-hero p.lead { opacity: .88; max-width: 460px; font-size: 1.05rem; line-height: 1.6; }
+    .pr-feats { list-style: none; padding: 0; margin: 26px 0 32px; display: grid; gap: 14px; max-width: 460px; }
+    .pr-feats li { display: flex; gap: 14px; align-items: flex-start; }
+    .pr-feats i { width: 38px; height: 38px; flex: none; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, .14); }
+    .pr-feats b { display: block; }
+    .pr-feats small { opacity: .8; }
+    .pr-hotline {
+        position: relative; z-index: 1; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 18px;
+        background: rgba(0, 0, 0, .2); border: 1px solid rgba(255, 255, 255, .15); max-width: 460px; color: #fff; text-decoration: none;
+    }
+    .pr-hotline:hover { background: rgba(0, 0, 0, .28); color: #fff; }
+    .pr-hotline .num { font-size: 1.6rem; font-weight: 800; letter-spacing: .02em; margin-left: auto; }
+
+    .pr-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; background: var(--aw-bg); }
+    .pr-card { width: min(560px, 100%); background: #fff; border-radius: 26px; box-shadow: var(--aw-shadow); border: 1px solid var(--aw-border); padding: 32px; }
+    .pr-card h2 { font-size: 1.55rem; font-weight: 800; color: var(--aw-ink); letter-spacing: -.02em; margin: 0 0 6px; }
+    .pr-card .sub { color: var(--aw-muted); margin: 0 0 22px; }
+    .pr-back { display: inline-flex; align-items: center; gap: 8px; color: var(--aw-muted); text-decoration: none; font-size: .88rem; font-weight: 600; margin-bottom: 18px; }
+    .pr-back:hover { color: var(--aw-ink); }
+
+    .pr-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--aw-bg); margin-bottom: 22px; }
+    .pr-seg button { border: 0; border-radius: 10px; padding: 10px; background: transparent; font: 600 .92rem 'Inter', sans-serif; color: var(--aw-muted); cursor: pointer; }
+    .pr-seg button.is-active { background: #fff; color: var(--aw-ink); box-shadow: 0 2px 8px rgba(15, 23, 42, .08); }
+
+    .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+    .pr-grid .full { grid-column: 1 / -1; }
+    .pr-section { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--aw-red); }
+    .pr-section::after { content: ""; flex: 1; height: 1px; background: var(--aw-border); }
+    .pr-error { color: var(--aw-red); font-size: .85rem; min-height: 1.2em; margin: 4px 0 10px; }
+    .pr-note { display: flex; gap: 10px; font-size: .82rem; color: var(--aw-muted); line-height: 1.5; margin-top: 16px; }
+    .pr-note i { color: var(--aw-green); margin-top: 3px; }
+
+    .pr-otp { display: flex; gap: 10px; justify-content: center; margin: 22px 0 8px; }
+    .pr-otp input {
+        width: 54px; height: 62px; text-align: center; font-size: 1.6rem; font-weight: 800; color: var(--aw-ink);
+        border: 1.5px solid var(--aw-border); border-radius: 14px; background: #fff; transition: border-color .15s, box-shadow .15s;
+    }
+    .pr-otp input:focus { outline: none; border-color: var(--aw-red); box-shadow: 0 0 0 4px rgba(229, 57, 53, .12); }
+    .pr-otp.is-error input { border-color: var(--aw-red); animation: pr-shake .35s; }
+    @@keyframes pr-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+    .pr-demo {
+        display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; margin-top: 18px;
+        background: var(--aw-amber-soft); color: #78350f; font-size: .86rem;
+    }
+    .pr-demo b { font-size: 1.05rem; letter-spacing: .12em; }
+    .pr-demo button { margin-left: auto; border: 0; background: #fff; color: #92400e; font-weight: 700; border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+    .pr-otp-meta { display: flex; justify-content: space-between; align-items: center; font-size: .86rem; color: var(--aw-muted); margin-top: 14px; }
+    .pr-link { border: 0; background: none; color: var(--aw-red); font-weight: 700; cursor: pointer; padding: 0; }
+    .pr-link[disabled] { color: #94a3b8; cursor: default; }
+    [data-step][hidden] { display: none !important; }
+
+    @@media (max-width: 960px) {
+        .pr-wrap { grid-template-columns: 1fr; }
+        .pr-hero { padding: 28px 24px 32px; }
+        .pr-hero h1 { margin-top: 28px; font-size: 1.9rem; }
+        .pr-feats { display: none; }
+        .pr-hero p.lead { margin-bottom: 18px; }
+        .pr-side { padding: 0 12px 32px; background: #fff; }
+        .pr-card { margin-top: -18px; position: relative; padding: 24px 20px; border-radius: 22px; }
+    }
+    @@media (max-width: 520px) {
+        .pr-grid { grid-template-columns: 1fr; }
+        .pr-otp { gap: 6px; }
+        .pr-otp input { width: 44px; height: 54px; font-size: 1.35rem; }
+    }
+</style>
+
+<div class="pr-wrap">
+    <section class="pr-hero">
+        <a class="pr-brand" href="/Account/Login"><span class="aw-brand-mark"><i class="fa-solid fa-truck-medical"></i></span> AmbulanceWay</a>
+        <h1>Một chạm, xe cấp cứu đang tới.</h1>
+        <p class="lead">Tạo hồ sơ y tế một lần. Khi khẩn cấp, chỉ cần bấm SOS: hệ thống định vị bạn, gọi xe gần nhất và báo trước cho bệnh viện.</p>
+        <ul class="pr-feats">
+            <li><i class="fa-solid fa-location-crosshairs"></i><div><b>Tự định vị, gửi SOS tức thì</b><small>Không cần đọc địa chỉ qua điện thoại</small></div></li>
+            <li><i class="fa-solid fa-map-location-dot"></i><div><b>Theo dõi xe theo thời gian thực</b><small>Biết tài xế là ai, còn bao lâu xe tới</small></div></li>
+            <li><i class="fa-solid fa-file-medical"></i><div><b>Kíp cấp cứu biết trước bệnh sử</b><small>Dị ứng thuốc, tiền sử bệnh được gửi kèm ca</small></div></li>
+        </ul>
+        <a class="pr-hotline" href="tel:115">
+            <i class="fa-solid fa-phone-volume fa-lg"></i>
+            <div><b>Nguy kịch, cần người hướng dẫn?</b><br /><small style="opacity:.8">Gọi ngay tổng đài cấp cứu</small></div>
+            <span class="num">115</span>
+        </a>
+    </section>
+
+    <section class="pr-side">
+        <div class="pr-card">
+            <a class="pr-back" href="/Account/Login"><i class="fa-solid fa-arrow-left"></i> Trang đăng nhập</a>
+
+            <!-- Bước 1: đăng nhập / tạo hồ sơ -->
+            <div data-step="form">
+                <h2 id="formTitle">Đăng nhập hồ sơ cấp cứu</h2>
+                <p class="sub" id="formSub">Nhập số điện thoại đã đăng ký để nhận mã xác thực.</p>
+                <div class="pr-seg" role="tablist">
+                    <button type="button" class="is-active" data-mode="login" role="tab">Đã có hồ sơ</button>
+                    <button type="button" data-mode="register" role="tab">Tạo hồ sơ mới</button>
+                </div>
+
+                <form id="loginForm" novalidate>
+                    <label class="aw-field"><span>Số điện thoại <b>*</b></span>
+                        <input class="aw-input" id="loginPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="VD: 0901234567" maxlength="15" />
+                    </label>
+                    <div class="pr-error" id="loginError"></div>
+                    <button class="aw-btn aw-btn-primary aw-btn-lg aw-btn-block" type="submit"><i class="fa-solid fa-paper-plane"></i> Nhận mã OTP</button>
+                </form>
+
+                <form id="registerForm" novalidate hidden>
+                    <div class="pr-grid">
+                        <div class="pr-section">Thông tin cơ bản</div>
+                        <label class="aw-field full"><span>Họ và tên <b>*</b></span><input class="aw-input" name="FullName" maxlength="100" autocomplete="name" placeholder="Nguyễn Văn An" /></label>
+                        <label class="aw-field"><span>Số điện thoại <b>*</b></span><input class="aw-input" name="PhoneNumber" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="0901234567" /></label>
+                        <label class="aw-field"><span>Ngày sinh <b>*</b></span><input class="aw-input" name="BirthDate" type="date" /></label>
+                        <label class="aw-field"><span>Giới tính <b>*</b></span>
+                            <select class="aw-input" name="Gender"><option value="Nam">Nam</option><option value="Nữ">Nữ</option><option value="Khác">Khác</option></select>
+                        </label>
+                        <label class="aw-field"><span>Địa chỉ thường trú <b>*</b></span><input class="aw-input" name="PermanentAddress" maxlength="300" autocomplete="street-address" placeholder="Số nhà, đường, quận" /></label>
+
+                        <div class="pr-section">Thông tin y tế</div>
+                        <label class="aw-field full"><span>Dị ứng thuốc</span><input class="aw-input" name="DrugAllergies" maxlength="500" placeholder="VD: Penicillin. Để trống nếu không có" /></label>
+                        <label class="aw-field full"><span>Tiền sử bệnh</span><textarea class="aw-input" name="MedicalHistory" maxlength="500" rows="2" placeholder="VD: Tăng huyết áp, tiểu đường type 2"></textarea></label>
+
+                        <div class="pr-section">Người liên hệ khẩn cấp</div>
+                        <label class="aw-field"><span>Họ tên <b>*</b></span><input class="aw-input" name="EmergencyContactName" maxlength="100" placeholder="Người thân" /></label>
+                        <label class="aw-field"><span>Số điện thoại <b>*</b></span><input class="aw-input" name="EmergencyContactPhone" type="tel" inputmode="tel" maxlength="15" placeholder="0909876543" /></label>
+                    </div>
+                    <div class="pr-error" id="registerError"></div>
+                    <button class="aw-btn aw-btn-primary aw-btn-lg aw-btn-block" type="submit"><i class="fa-solid fa-shield-heart"></i> Tạo hồ sơ & nhận mã OTP</button>
+                </form>
+
+                <div class="pr-note"><i class="fa-solid fa-lock"></i><span>Hồ sơ y tế chỉ hiển thị cho tài xế nhận ca của bạn và bệnh viện tiếp nhận.</span></div>
+            </div>
+
+            <!-- Bước 2: OTP -->
+            <div data-step="otp" hidden>
+                <h2>Nhập mã xác thực</h2>
+                <p class="sub">Mã gồm 6 số đã gửi tới <b id="otpPhone"></b>.</p>
+                <div class="pr-otp" id="otpBoxes">
+                    @for (var i = 0; i < 6; i++)
+                    {
+                        <input inputmode="numeric" maxlength="1" autocomplete="@(i == 0 ? "one-time-code" : "off")" aria-label="Chữ số @(i + 1)" />
+                    }
+                </div>
+                <div class="pr-error" id="otpError" style="text-align:center"></div>
+                <button class="aw-btn aw-btn-primary aw-btn-lg aw-btn-block" id="btnVerify" type="button"><i class="fa-solid fa-shield-halved"></i> Xác thực</button>
+                <div class="pr-otp-meta">
+                    <button type="button" class="pr-link" id="btnBack"><i class="fa-solid fa-arrow-left"></i> Đổi số điện thoại</button>
+                    <span><span id="otpTimer"></span> <button type="button" class="pr-link" id="btnResend" disabled>Gửi lại mã</button></span>
+                </div>
+                <div class="pr-demo" id="otpDemo" hidden>
+                    <i class="fa-solid fa-flask"></i>
+                    <span>Bản demo chưa gửi SMS. Mã của bạn: <b id="otpDemoCode"></b></span>
+                    <button type="button" id="btnFill">Điền giúp</button>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const boxes = [...document.querySelectorAll('#otpBoxes input')];
+    const st = { mode: 'login', phone: '', otp: '', expiresAt: 0, resendAt: 0, timer: null, busy: false };
+
+    const normalizePhone = (v) => String(v || '').replace(/[\s.\-()]/g, '').replace(/^\+84/, '0');
+    const validPhone = (v) => /^0\d{9,10}$/.test(v);
+
+    function setBusy(btn, busy, html) {
+        st.busy = busy;
+        if (!btn) return;
+        if (busy) { btn.dataset.html = btn.innerHTML; btn.innerHTML = '<span class="aw-spin"></span> Đang xử lý...'; }
+        else btn.innerHTML = html || btn.dataset.html;
+        btn.disabled = busy;
+    }
+
+    function setMode(mode) {
+        st.mode = mode;
+        document.querySelectorAll('.pr-seg button').forEach((b) => b.classList.toggle('is-active', b.dataset.mode === mode));
+        $('loginForm').hidden = mode !== 'login';
+        $('registerForm').hidden = mode !== 'register';
+        $('formTitle').textContent = mode === 'login' ? 'Đăng nhập hồ sơ cấp cứu' : 'Tạo hồ sơ cấp cứu';
+        $('formSub').textContent = mode === 'login'
+            ? 'Nhập số điện thoại đã đăng ký để nhận mã xác thực.'
+            : 'Điền một lần, dùng cho mọi lần gọi xe. Mục có dấu * là bắt buộc.';
+        $('loginError').textContent = $('registerError').textContent = '';
+        try { localStorage.setItem('aw.patient.mode', mode); } catch { }
+    }
+    document.querySelector('.pr-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
+
+    function showStep(step) {
+        document.querySelectorAll('[data-step]').forEach((el) => el.hidden = el.dataset.step !== step);
+        if (step === 'otp') setTimeout(() => boxes[0].focus(), 50);
+    }
+
+    // ----- Gửi mã -----
+    function startOtp(phone, data, notice) {
+        st.phone = phone;
+        st.otp = data && data.otp ? String(data.otp) : '';
+        st.expiresAt = Date.now() + ((data && data.expiresInSeconds) || 300) * 1000;
+        st.resendAt = Date.now() + 30000;
+        $('otpPhone').textContent = phone;
+        $('otpDemo').hidden = !st.otp;
+        $('otpDemoCode').textContent = st.otp;
+        $('otpError').textContent = '';
+        boxes.forEach((b) => b.value = '');
+        clearInterval(st.timer);
+        st.timer = setInterval(tickTimer, 1000);
+        tickTimer();
+        showStep('otp');
+        if (notice) AW.toast(notice, 'info', 6000);
+    }
+
+    function tickTimer() {
+        const left = Math.max(0, Math.round((st.expiresAt - Date.now()) / 1000));
+        $('otpTimer').textContent = left > 0 ? 'Hết hạn sau ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + ' ·' : 'Mã đã hết hạn ·';
+        $('btnResend').disabled = Date.now() < st.resendAt && left > 0;
+    }
+
+    $('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (st.busy) return;
+        const phone = normalizePhone($('loginPhone').value);
+        if (!validPhone(phone)) { $('loginError').textContent = 'Số điện thoại không hợp lệ (10–11 số, bắt đầu bằng 0).'; return; }
+        const btn = e.submitter || $('loginForm').querySelector('button');
+        setBusy(btn, true);
+        try {
+            const data = await AW.api('POST', '/api/patientauth/login', { body: { PhoneNumber: phone } });
+            startOtp(phone, data);
+        } catch (err) {
+            if (err.status === 404) {
+                $('loginError').innerHTML = 'Số này chưa có hồ sơ. <button type="button" class="pr-link" id="goRegister">Tạo hồ sơ mới</button>';
+                $('goRegister').onclick = () => { setMode('register'); $('registerForm').PhoneNumber.value = phone; $('registerForm').FullName.focus(); };
+            } else {
+                $('loginError').textContent = err.message;
+            }
+        } finally {
+            setBusy(btn, false);
+        }
+    });
+
+    $('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (st.busy) return;
+        const f = e.target;
+        const v = (n) => f[n].value.trim();
+        const phone = normalizePhone(v('PhoneNumber'));
+        const contactPhone = normalizePhone(v('EmergencyContactPhone'));
+        const missing = ['FullName', 'PhoneNumber', 'BirthDate', 'PermanentAddress', 'EmergencyContactName', 'EmergencyContactPhone'].filter((n) => !v(n));
+        f.querySelectorAll('.aw-input').forEach((i) => i.style.borderColor = '');
+        missing.forEach((n) => f[n].style.borderColor = 'var(--aw-red)');
+        let error = missing.length ? 'Vui lòng điền đủ các mục bắt buộc.' : '';
+        if (!error && !validPhone(phone)) { error = 'Số điện thoại không hợp lệ.'; f.PhoneNumber.style.borderColor = 'var(--aw-red)'; }
+        if (!error && !validPhone(contactPhone)) { error = 'Số điện thoại người liên hệ không hợp lệ.'; f.EmergencyContactPhone.style.borderColor = 'var(--aw-red)'; }
+        const birth = new Date(v('BirthDate'));
+        if (!error && (isNaN(birth) || birth > new Date() || birth.getFullYear() < 1900)) { error = 'Ngày sinh không hợp lệ.'; f.BirthDate.style.borderColor = 'var(--aw-red)'; }
+        $('registerError').textContent = error;
+        if (error) return;
+
+        const btn = f.querySelector('button[type=submit]');
+        setBusy(btn, true);
+        try {
+            // Số đã có hồ sơ: đăng nhập bằng OTP thay vì ghi đè hồ sơ cũ
+            try {
+                const existing = await AW.api('POST', '/api/patientauth/login', { body: { PhoneNumber: phone } });
+                startOtp(phone, existing, 'Số này đã có hồ sơ. Nhập mã OTP để đăng nhập — hồ sơ cũ được giữ nguyên.');
+                return;
+            } catch (err) {
+                if (err.status !== 404) throw err;
+            }
+            const data = await AW.api('POST', '/api/patientauth/register', {
+                body: {
+                    FullName: v('FullName'), PhoneNumber: phone, BirthDate: v('BirthDate') + 'T00:00:00', Gender: f.Gender.value,
+                    PermanentAddress: v('PermanentAddress'), MedicalHistory: v('MedicalHistory') || null, DrugAllergies: v('DrugAllergies') || null,
+                    EmergencyContactName: v('EmergencyContactName'), EmergencyContactPhone: contactPhone
+                }
+            });
+            startOtp(phone, data);
+        } catch (err) {
+            $('registerError').textContent = err.message;
+        } finally {
+            setBusy(btn, false);
+        }
+    });
+
+    $('btnResend').onclick = async () => {
+        if (st.busy) return;
+        try {
+            const data = await AW.api('POST', '/api/patientauth/login', { body: { PhoneNumber: st.phone } });
+            startOtp(st.phone, data);
+            AW.toast('Đã gửi mã mới.', 'success');
+        } catch (err) {
+            AW.toast(err.message, 'error');
+        }
+    };
+    $('btnBack').onclick = () => { clearInterval(st.timer); showStep('form'); };
+    $('btnFill').onclick = () => { st.otp.split('').forEach((c, i) => boxes[i].value = c); verify(); };
+
+    // ----- Ô nhập OTP -----
+    boxes.forEach((box, i) => {
+        box.addEventListener('input', () => {
+            const digits = box.value.replace(/\D/g, '');
+            if (digits.length > 1) { // dán cả mã, hoặc trình duyệt tự điền
+                digits.slice(0, 6 - i).split('').forEach((c, k) => boxes[i + k].value = c);
+            } else {
+                box.value = digits;
+            }
+            const next = boxes.find((b) => !b.value);
+            if (box.value && next) next.focus();
+            $('otpBoxes').classList.remove('is-error');
+            if (boxes.every((b) => b.value)) verify();
+        });
+        box.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !box.value && i > 0) { boxes[i - 1].focus(); boxes[i - 1].value = ''; }
+            if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus();
+            if (e.key === 'ArrowRight' && i < 5) boxes[i + 1].focus();
+            if (e.key === 'Enter') verify();
+        });
+        box.addEventListener('focus', () => box.select());
+    });
+    $('btnVerify').onclick = () => verify();
+
+    async function verify() {
+        const code = boxes.map((b) => b.value).join('');
+        if (st.busy) return;
+        if (code.length !== 6) { $('otpError').textContent = 'Nhập đủ 6 số.'; return; }
+        const btn = $('btnVerify');
+        setBusy(btn, true);
+        $('otpError').textContent = '';
+        try {
+            const res = await AW.api('POST', '/api/patientauth/verify-otp', { body: { PhoneNumber: st.phone, OtpCode: code } });
+            // Mở phiên web bằng token vừa nhận (máy chủ kiểm tra token, không tin dữ liệu từ form)
+            const session = await AW.api('POST', '/Patient/OpenSession', { token: res.token });
+            clearInterval(st.timer);
+            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Xin chào ' + AW.esc(res.fullName || '') + '!';
+            location.href = session.redirectUrl || '/Patient/Sos';
+        } catch (err) {
+            $('otpError').textContent = err.message;
+            $('otpBoxes').classList.add('is-error');
+            boxes.forEach((b) => b.value = '');
+            boxes[0].focus();
+            setBusy(btn, false);
+        }
+    }
+
+    try { if (localStorage.getItem('aw.patient.mode') === 'register') setMode('register'); } catch { }
+})();
+</script>
+}

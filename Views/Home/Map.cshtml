@@ -1,158 +1,1378 @@
 @{
-    ViewData["Title"] = "Map";
+    ViewData["Title"] = "Bảng nhiệm vụ tài xế";
+    ViewData["BodyClass"] = "dv-page";
+    Layout = "_PublicLayout";
 }
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 
 <style>
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-    #map {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-}
-    
-    .ui-header { 
-        position: absolute; top: 0; left: 0; right: 0; height: 60px; 
-        background: white; display: flex; align-items: center; justify-content: center; 
-        z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    body.dv-page { overflow: hidden; background: var(--aw-night); }
+
+    .dv-app { display: flex; height: 100vh; height: 100dvh; }
+
+    /* ---------- Bảng điều khiển bên trái ---------- */
+    .dv-panel {
+        width: 420px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        background: linear-gradient(180deg, var(--aw-night) 0%, var(--aw-night-2) 100%);
+        color: #cbd5e1;
+        z-index: 600;
+        box-shadow: 12px 0 40px rgba(2, 6, 23, .35);
     }
+    .dv-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px 14px; }
+    .dv-head-title { flex: 1; min-width: 0; line-height: 1.15; }
+    .dv-head-title b { display: block; color: #fff; font-size: 1.05rem; letter-spacing: -.01em; }
+    .dv-head-title small { color: #64748b; font-size: .78rem; }
+    .dv-conn {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 5px 10px; border-radius: 999px; font-size: .74rem; font-weight: 600;
+        background: rgba(148, 163, 184, .12); color: #94a3b8;
+    }
+    .dv-conn.is-on { background: rgba(34, 197, 94, .14); color: #4ade80; }
+    .dv-conn.is-wait { background: rgba(245, 158, 11, .14); color: #fbbf24; }
+    .dv-icon-btn {
+        width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--aw-night-line);
+        background: rgba(255, 255, 255, .03); color: #94a3b8; display: grid; place-items: center; cursor: pointer;
+    }
+    .dv-icon-btn:hover { color: #fff; background: rgba(255, 255, 255, .08); }
 
-    .ui-container { position: absolute; z-index: 1001; pointer-events: none; width: 100%; height: 100%; top: 0; left: 0; }
-    .ui-btn { pointer-events: auto; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+    .dv-me {
+        margin: 0 16px; padding: 14px; border-radius: 18px;
+        background: rgba(255, 255, 255, .04); border: 1px solid var(--aw-night-line);
+        display: flex; align-items: center; gap: 12px;
+    }
+    .dv-avatar {
+        width: 46px; height: 46px; border-radius: 14px; flex: none; display: grid; place-items: center;
+        background: linear-gradient(135deg, #334155, #1e293b); color: #fff; font-weight: 800; letter-spacing: .02em;
+    }
+    .dv-me-text { flex: 1; min-width: 0; }
+    .dv-me-text b { display: block; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dv-me-text small { display: block; color: #64748b; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .pos-bell { position: absolute; top: 70px; left: 20px; background: none; font-size: 30px; }
-    .pos-complete { position: absolute; top: 75px; left: 80px; background: #28a745; color: white; padding: 8px 15px; }
-    .pos-toggle-route { position: absolute; top: 20px; right: 120px; background: #f8f9fa; border: 1px solid #ccc; padding: 5px 10px; z-index: 1002; }
-    .pos-logout { position: absolute; top: 95px; right: 20px; background: #343a40; color: white; padding: 8px 15px; }
-    .pos-theme { position: absolute; top: 190px; right: 30px; background: white; border-radius: 50%; width: 40px; height: 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); justify-content: center; }
-    .pos-locate { position: absolute; bottom: 30px; right: 30px; background: white; border-radius: 50%; width: 50px; height: 50px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); justify-content: center; font-size: 20px; }
+    .dv-duty {
+        position: relative; flex: none; border: 0; cursor: pointer; height: 34px; min-width: 92px;
+        border-radius: 999px; background: #1e293b; color: #94a3b8; font: 700 .78rem 'Inter', sans-serif;
+        padding: 0 12px 0 36px; text-align: left; transition: background .25s, color .25s;
+    }
+    .dv-duty-knob {
+        position: absolute; left: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%;
+        background: #475569; transition: background .25s, transform .25s;
+    }
+    .dv-duty.is-on { background: rgba(34, 197, 94, .18); color: #4ade80; }
+    .dv-duty.is-on .dv-duty-knob { background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, .2); }
+    .dv-duty[disabled] { opacity: .6; cursor: wait; }
 
-    #badge { background: red; color: white; padding: 2px 6px; border-radius: 50%; font-size: 12px; position: absolute; top: 0; right: -5px; }
+    .dv-tabs { display: flex; gap: 6px; margin: 14px 16px 0; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, .04); }
+    .dv-tabs button {
+        flex: 1; border: 0; border-radius: 10px; padding: 9px; background: transparent; color: #94a3b8;
+        font: 600 .86rem 'Inter', sans-serif; cursor: pointer;
+    }
+    .dv-tabs button.is-active { background: #1e293b; color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+
+    .dv-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+    .dv-body[hidden] { display: none; }
+
+    .dv-card { background: rgba(255, 255, 255, .04); border: 1px solid var(--aw-night-line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+    .dv-card h4 { color: #f1f5f9; font-size: .95rem; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+    .dv-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64748b; margin: 4px 0 10px; display: flex; align-items: center; justify-content: space-between; }
+    .dv-muted { color: #64748b; font-size: .85rem; }
+
+    /* Nghỉ / chờ ca */
+    .dv-hero { text-align: center; padding: 26px 18px 20px; }
+    .dv-hero-icon { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 22px; display: grid; place-items: center; font-size: 28px; background: rgba(148, 163, 184, .1); color: #94a3b8; }
+    .dv-hero h3 { color: #fff; font-size: 1.15rem; font-weight: 800; margin: 0 0 6px; }
+    .dv-hero p { color: #94a3b8; font-size: .9rem; margin: 0 0 18px; line-height: 1.5; }
+
+    .dv-radar { position: relative; width: 112px; height: 112px; margin: 4px auto 16px; }
+    .dv-radar span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(34, 197, 94, .5); animation: dv-radar 2.8s ease-out infinite; }
+    .dv-radar span:nth-child(2) { animation-delay: .9s; }
+    .dv-radar span:nth-child(3) { animation-delay: 1.8s; }
+    .dv-radar i {
+        position: absolute; inset: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
+        background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; box-shadow: 0 10px 30px rgba(34, 197, 94, .35);
+    }
+    @@keyframes dv-radar { 0% { transform: scale(.45); opacity: 1; } 100% { transform: scale(1.15); opacity: 0; } }
+
+    .dv-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .dv-stat { background: rgba(255, 255, 255, .04); border: 1px solid var(--aw-night-line); border-radius: 14px; padding: 10px 12px; }
+    .dv-stat b { display: block; color: #fff; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .dv-stat small { color: #64748b; font-size: .72rem; }
+
+    .dv-req {
+        border-radius: 16px; padding: 14px; margin-bottom: 10px; background: rgba(229, 57, 53, .08);
+        border: 1px solid rgba(229, 57, 53, .25); animation: aw-pop .25s ease;
+    }
+    .dv-req-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .dv-req b { color: #fff; }
+    .dv-req p { margin: 0 0 10px; color: #cbd5e1; font-size: .87rem; line-height: 1.45; }
+    .dv-req-meta { display: flex; gap: 14px; color: #94a3b8; font-size: .8rem; margin-bottom: 12px; flex-wrap: wrap; }
+    .dv-req-actions { display: flex; gap: 8px; }
+    .dv-req-actions .aw-btn { flex: 1; }
+    .dv-req .aw-btn-light { background: transparent; color: #cbd5e1; border-color: #334155; }
+
+    /* Nhiệm vụ */
+    .dv-steps { display: flex; align-items: flex-start; margin: 2px 0 16px; }
+    .dv-step { flex: 1; text-align: center; position: relative; font-size: .7rem; color: #64748b; font-weight: 600; }
+    .dv-step::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 3px; background: #1e293b; z-index: 0; }
+    .dv-step:first-child::before { display: none; }
+    .dv-step i { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 6px; background: #1e293b; color: #64748b; font-size: 12px; }
+    .dv-step.is-done i { background: #22c55e; color: #fff; }
+    .dv-step.is-done::before, .dv-step.is-now::before { background: #22c55e; }
+    .dv-step.is-now i { background: var(--aw-red); color: #fff; box-shadow: 0 0 0 5px rgba(229, 57, 53, .2); }
+    .dv-step.is-now { color: #fff; }
+
+    .dv-eta {
+        border-radius: 20px; padding: 18px; margin-bottom: 14px; color: #fff;
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 14px 34px rgba(229, 57, 53, .3);
+    }
+    .dv-eta.is-hospital { background: linear-gradient(135deg, #16a34a 0%, #166534 100%); box-shadow: 0 14px 34px rgba(22, 163, 74, .3); }
+    .dv-eta.is-wait { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); box-shadow: 0 14px 34px rgba(245, 158, 11, .25); }
+    .dv-eta-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+    .dv-eta-main { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 4px; }
+    .dv-eta-main b { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .dv-eta-main span { opacity: .9; font-weight: 600; }
+    .dv-eta-addr { display: flex; gap: 8px; font-size: .88rem; opacity: .95; line-height: 1.4; margin-top: 8px; }
+    .dv-eta .aw-spin { width: 14px; height: 14px; }
+
+    .dv-kv { display: grid; grid-template-columns: 22px 1fr; gap: 8px 8px; font-size: .88rem; color: #cbd5e1; }
+    .dv-kv i { color: #64748b; margin-top: 3px; text-align: center; }
+    .dv-kv .is-alert { color: #fbbf24; }
+    .dv-call { display: inline-flex; align-items: center; gap: 6px; color: #4ade80; text-decoration: none; font-weight: 600; }
+    .dv-call:hover { color: #86efac; }
+
+    .dv-hosp {
+        display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+        border: 1px solid var(--aw-night-line); background: rgba(255, 255, 255, .03); color: #e2e8f0;
+        border-radius: 14px; padding: 12px; margin-bottom: 8px; font-family: inherit; transition: .15s;
+    }
+    .dv-hosp:hover { border-color: #22c55e; background: rgba(34, 197, 94, .08); }
+    .dv-hosp[disabled] { opacity: .5; cursor: wait; }
+    .dv-hosp-ic { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; background: rgba(34, 197, 94, .15); color: #4ade80; }
+    .dv-hosp-text { flex: 1; min-width: 0; }
+    .dv-hosp-text b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dv-hosp-text small { color: #94a3b8; }
+
+    .dv-dir { list-style: none; margin: 0; padding: 0; }
+    .dv-dir li { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px dashed #1e293b; font-size: .86rem; }
+    .dv-dir li i { width: 26px; height: 26px; border-radius: 8px; flex: none; display: grid; place-items: center; background: #1e293b; color: #94a3b8; font-size: 11px; }
+    .dv-dir li span { flex: 1; }
+    .dv-dir li small { color: #64748b; white-space: nowrap; }
+    details.dv-card summary { cursor: pointer; list-style: none; color: #f1f5f9; font-weight: 700; font-size: .92rem; display: flex; justify-content: space-between; }
+    details.dv-card summary::-webkit-details-marker { display: none; }
+    details.dv-card[open] summary { margin-bottom: 8px; }
+
+    /* Lịch sử */
+    .dv-trip { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1e293b; }
+    .dv-trip:last-child { border-bottom: 0; }
+    .dv-trip-ic { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; background: rgba(34, 197, 94, .12); color: #4ade80; }
+    .dv-trip b { color: #f1f5f9; font-size: .9rem; display: block; }
+    .dv-trip small { color: #64748b; display: block; font-size: .78rem; }
+
+    /* ---------- Bản đồ ---------- */
+    .dv-map-wrap { flex: 1; position: relative; min-width: 0; }
+    #map { position: absolute; inset: 0; background: #e5e7eb; }
+    .dv-tools { position: absolute; right: 16px; top: 16px; z-index: 500; display: flex; flex-direction: column; gap: 8px; }
+    .dv-tool {
+        width: 44px; height: 44px; border-radius: 14px; border: 0; background: #fff; color: var(--aw-ink); cursor: pointer;
+        display: grid; place-items: center; box-shadow: var(--aw-shadow); font-size: 16px;
+    }
+    .dv-tool:hover { color: var(--aw-red); }
+    .dv-tool.is-on { background: var(--aw-ink); color: #fff; }
+    .dv-gps {
+        position: absolute; left: 16px; bottom: 22px; z-index: 500; display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 12px; border-radius: 12px; background: #fff; box-shadow: var(--aw-shadow); font-size: .8rem; font-weight: 600; color: var(--aw-text);
+        max-width: calc(100% - 32px);
+    }
+    .dv-gps i { color: var(--aw-green); }
+    .dv-gps.is-warn i { color: var(--aw-amber); }
+    .dv-gps.is-sim i { color: #2563eb; }
+    .dv-sim-hint {
+        position: absolute; left: 50%; top: 16px; transform: translateX(-50%); z-index: 500;
+        background: #1d4ed8; color: #fff; padding: 8px 14px; border-radius: 999px; font-size: .8rem; font-weight: 600;
+        box-shadow: 0 8px 20px rgba(29, 78, 216, .35); white-space: nowrap;
+    }
+    .dv-sim-hint[hidden] { display: none; }
+
+    /* ---------- Hộp thoại ca mới ---------- */
+    .dv-inc .aw-modal-card { width: min(460px, 100%); overflow: hidden; }
+    .dv-inc-top {
+        display: flex; align-items: center; gap: 16px; padding: 22px 24px; color: #fff;
+        background: radial-gradient(circle at 15% 20%, #f87171 0%, #dc2626 45%, #991b1b 100%);
+    }
+    .dv-inc-kicker { display: inline-flex; align-items: center; gap: 7px; font-size: .74rem; font-weight: 800; letter-spacing: .1em; opacity: .9; }
+    .dv-inc-top h3 { margin: 4px 0 0; font-size: 1.35rem; font-weight: 800; }
+    .dv-ring { position: relative; width: 70px; height: 70px; flex: none; }
+    .dv-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .dv-ring circle { fill: none; stroke-width: 8; }
+    .dv-ring .bg { stroke: rgba(255, 255, 255, .25); }
+    .dv-ring .fg { stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    .dv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; }
+    .dv-ring.is-static .fg { display: none; }
+    .dv-inc-desc { color: var(--aw-text); font-size: .95rem; line-height: 1.5; margin: 0 0 12px; }
+    .dv-inc-addr { display: flex; gap: 10px; padding: 12px; border-radius: 14px; background: #f8fafc; color: var(--aw-ink); font-weight: 600; font-size: .9rem; }
+    .dv-inc-addr i { color: var(--aw-red); margin-top: 3px; }
+    .dv-inc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .dv-inc-stats div { border: 1px solid var(--aw-border); border-radius: 12px; padding: 10px; text-align: center; }
+    .dv-inc-stats b { display: block; color: var(--aw-ink); font-size: 1.05rem; }
+    .dv-inc-stats small { color: var(--aw-muted); font-size: .72rem; }
+
+    @@media (max-width: 900px) {
+        .dv-app { flex-direction: column; }
+        .dv-map-wrap { order: -1; flex: none; height: 42vh; }
+        .dv-panel { width: 100%; flex: 1; border-radius: 22px 22px 0 0; margin-top: -18px; }
+        .dv-head { padding-top: 16px; }
+        .dv-gps { bottom: 30px; }
+    }
 </style>
 
-<div class="ui-header">
-    <h2 style="margin:0;">🚑 AMBULANCE WAY</h2>
+<div class="dv-app">
+    <aside class="dv-panel" aria-label="Bảng nhiệm vụ">
+        <header class="dv-head">
+            <span class="aw-brand-mark"><i class="fa-solid fa-truck-medical"></i></span>
+            <div class="dv-head-title">
+                <b>AmbulanceWay</b>
+                <small>Bảng nhiệm vụ tài xế</small>
+            </div>
+            <span class="dv-conn" id="conn"><span class="aw-dot"></span><span id="connText">Ngoại tuyến</span></span>
+            <button class="dv-icon-btn" id="btnLogout" title="Đăng xuất" aria-label="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </header>
+
+        <section class="dv-me">
+            <div class="dv-avatar" id="meAvatar"><span class="aw-spin"></span></div>
+            <div class="dv-me-text">
+                <b id="meName">Đang tải hồ sơ...</b>
+                <small id="meSub">&nbsp;</small>
+            </div>
+            <button class="dv-duty" id="btnDuty" role="switch" aria-checked="false" disabled>
+                <span class="dv-duty-knob"></span><span id="dutyLabel">Nghỉ</span>
+            </button>
+        </section>
+
+        <nav class="dv-tabs" role="tablist">
+            <button class="is-active" data-tab="mission" role="tab"><i class="fa-solid fa-route"></i> Nhiệm vụ</button>
+            <button data-tab="history" role="tab"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử chuyến</button>
+        </nav>
+
+        <div class="dv-body" id="tab-mission"><div id="view"></div></div>
+        <div class="dv-body" id="tab-history" hidden><div id="history"></div></div>
+    </aside>
+
+    <main class="dv-map-wrap">
+        <div id="map"></div>
+        <div class="dv-sim-hint" id="simHint" hidden><i class="fa-solid fa-hand-pointer"></i> Chế độ mô phỏng: bấm lên bản đồ để đặt vị trí xe</div>
+        <div class="dv-tools">
+            <button class="dv-tool" id="btnZoomIn" title="Phóng to" aria-label="Phóng to"><i class="fa-solid fa-plus"></i></button>
+            <button class="dv-tool" id="btnZoomOut" title="Thu nhỏ" aria-label="Thu nhỏ"><i class="fa-solid fa-minus"></i></button>
+            <button class="dv-tool" id="btnRecenter" title="Bám theo xe" aria-label="Bám theo xe"><i class="fa-solid fa-location-crosshairs"></i></button>
+            <button class="dv-tool" id="btnSim" title="Mô phỏng di chuyển (demo khi không có GPS): xe tự chạy theo lộ trình" aria-label="Mô phỏng di chuyển"><i class="fa-solid fa-person-running"></i></button>
+        </div>
+        <div class="dv-gps is-warn" id="gps"><i class="fa-solid fa-satellite-dish"></i><span id="gpsText">Đang lấy vị trí...</span></div>
+    </main>
 </div>
 
-<div id="map"></div>
-
-<div class="ui-container">
-    <button class="ui-btn pos-bell" onclick="showEmergency()">
-        🔔<span id="badge">0</span>
-    </button>
-
-    <button class="ui-btn pos-complete" onclick="completeCase()">
-        ✔️ Hoàn thành ca
-    </button>
-
-    <button class="ui-btn pos-toggle-route" id="toggleRoute" onclick="toggleRoutePanel()">
-        ✕ Ẩn chỉ đường
-    </button>
-
-    <button class="ui-btn pos-logout" onclick="endShift()">
-        🔳 Thoát ca
-    </button>
-
-    <button class="ui-btn pos-theme" onclick="toggleTheme()">
-        🌙
-    </button>
-
-    <button class="ui-btn pos-locate" onclick="locateUser()">
-        📍
-    </button>
+<div class="aw-modal dv-inc" id="incoming" hidden>
+    <div class="aw-modal-card" role="dialog" aria-modal="true" aria-labelledby="incType">
+        <div class="dv-inc-top">
+            <div class="dv-ring" id="incRing">
+                <svg viewBox="0 0 80 80"><circle class="bg" cx="40" cy="40" r="34" /><circle class="fg" id="incArc" cx="40" cy="40" r="34" /></svg>
+                <b id="incCount"><i class="fa-solid fa-truck-medical"></i></b>
+            </div>
+            <div>
+                <span class="dv-inc-kicker"><span class="aw-dot is-live"></span> <span id="incKicker">CA CẤP CỨU MỚI</span></span>
+                <h3 id="incType">--</h3>
+            </div>
+        </div>
+        <div class="aw-modal-body">
+            <p class="dv-inc-desc" id="incDesc"></p>
+            <div class="dv-inc-addr"><i class="fa-solid fa-location-dot"></i><span id="incAddr"></span></div>
+            <div class="dv-inc-stats">
+                <div><b id="incDist">--</b><small>Cách bạn</small></div>
+                <div><b id="incEta">--</b><small>Dự kiến tới</small></div>
+                <div><b id="incAgo">--</b><small>Gửi lúc</small></div>
+            </div>
+        </div>
+        <div class="aw-modal-actions">
+            <button class="aw-btn aw-btn-light" id="incSkip">Để sau</button>
+            <button class="aw-btn aw-btn-primary" id="incAccept"><i class="fa-solid fa-check"></i> Nhận ca</button>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-
 <script>
-    var emergencyCases = [
-        { loc: "123 Lê Lợi, Q.1", lat: 10.780, lng: 106.700 },
-        { loc: "456 Nguyễn Huệ, Q.1", lat: 10.770, lng: 106.710 }
-    ];
+(() => {
+    'use strict';
 
-    function updateBadge() {
-        document.getElementById("badge").innerText = emergencyCases.length;
+    const INCOMING_SECONDS = 20;
+    const $ = (id) => document.getElementById(id);
+    const esc = AW.esc;
+
+    const S = {
+        token: null, me: null, station: null,
+        onDuty: false, dutyStart: null, busy: false,
+        hub: null,
+        pos: null, posSource: 'none', accuracy: null, gpsNote: '',
+        sim: false, simIdx: 0, follow: true,
+        pending: [], incoming: null, incomingTimer: null, dismissed: new Set(),
+        mission: null, epoch: 0, accepting: null, arrived: false,
+        route: null, routeReq: 0, routeLoading: false, routeOrigin: null, routePlannedAt: 0, lastEtaPush: 0,
+        legs: { toPatient: null, toHospital: null },
+        hospitals: [], options: [], optionsLoading: false, notified: new Set(),
+        lastPush: 0, tab: 'mission'
+    };
+
+    // ===================== Bản đồ =====================
+    const map = AW.baseMap('map').setView([AW.HCMC.lat, AW.HCMC.lng], 13);
+    const hospitalLayer = L.layerGroup().addTo(map);
+    const pendingLayer = L.layerGroup().addTo(map);
+    const routeLayer = L.layerGroup().addTo(map);
+    const missionLayer = L.layerGroup().addTo(map);
+    let carMarker = null;
+
+    map.on('dragstart', () => { S.follow = false; $('btnRecenter').classList.remove('is-on'); });
+    map.on('click', (e) => {
+        if (!S.sim) return;
+        setPosition({ lat: e.latlng.lat, lng: e.latlng.lng }, 'sim');
+        if (S.mission && S.mission.phase !== 'pickedUp') planRoute();
+    });
+    $('btnZoomIn').onclick = () => map.zoomIn();
+    $('btnZoomOut').onclick = () => map.zoomOut();
+    $('btnRecenter').onclick = () => {
+        S.follow = true;
+        $('btnRecenter').classList.add('is-on');
+        if (S.pos) map.flyTo([S.pos.lat, S.pos.lng], Math.max(map.getZoom(), 15), { duration: .6 });
+    };
+    $('btnSim').onclick = () => toggleSim();
+
+    function drawCar() {
+        if (!S.pos) return;
+        if (!carMarker) {
+            carMarker = L.marker([S.pos.lat, S.pos.lng], { icon: AW.icons.car(), zIndexOffset: 1000 })
+                .bindTooltip('Xe của bạn', { className: 'aw-tip', direction: 'top', offset: [0, -20] }).addTo(map);
+            map.setView([S.pos.lat, S.pos.lng], 15);
+        } else {
+            AW.glide(carMarker, S.pos, S.sim ? 380 : 900);
+        }
+        if (S.follow && S.mission && !map.getBounds().pad(-0.3).contains([S.pos.lat, S.pos.lng])) {
+            map.panTo([S.pos.lat, S.pos.lng], { animate: true, duration: .5 });
+        }
     }
 
-    window.showEmergency = function () {
-        if (emergencyCases.length === 0) {
-            alert("Hết ca cấp cứu");
+    function drawHospitals() {
+        hospitalLayer.clearLayers();
+        S.hospitals.forEach((h) => {
+            const open = isOpen(h);
+            L.marker([h.lat, h.lng], { icon: AW.icons.hospital(true, open) })
+                .bindTooltip(esc(h.name) + (h.availableEmergencyBeds != null ? ' · ' + h.availableEmergencyBeds + ' giường trống' : '') + (open ? '' : ' · tạm ngưng'),
+                    { className: 'aw-tip', direction: 'top', offset: [0, -12] })
+                .addTo(hospitalLayer);
+        });
+    }
+
+    function drawPending() {
+        pendingLayer.clearLayers();
+        if (S.mission || !S.onDuty) return;
+        S.pending.forEach((p) => {
+            L.marker([p.lat, p.lng], { icon: AW.icons.patient(true) })
+                .bindTooltip('#' + p.caseId + ' · ' + esc(p.type), { className: 'aw-tip', direction: 'top', offset: [0, -18] })
+                .on('click', () => openIncoming(p, false))
+                .addTo(pendingLayer);
+        });
+    }
+
+    function drawMission() {
+        missionLayer.clearLayers();
+        const m = S.mission;
+        if (!m) return;
+        L.marker([m.lat, m.lng], { icon: AW.icons.patient(m.phase === 'toPatient') })
+            .bindTooltip('Bệnh nhân · ' + esc(m.address || ''), { className: 'aw-tip', direction: 'top', offset: [0, -18] })
+            .addTo(missionLayer);
+        if (m.hospital && m.hospital.lat) {
+            L.marker([m.hospital.lat, m.hospital.lng], { icon: AW.icons.hospital(false, true) })
+                .bindTooltip(esc(m.hospital.name), { className: 'aw-tip', direction: 'top', offset: [0, -18], permanent: m.phase === 'toHospital' })
+                .addTo(missionLayer);
+        }
+    }
+
+    function drawRoute() {
+        routeLayer.clearLayers();
+        if (!S.route || !S.mission) return;
+        const color = S.mission.phase === 'toHospital' ? '#16a34a' : '#e53935';
+        L.polyline(S.route.points, { color: '#ffffff', weight: 11, opacity: .9 }).addTo(routeLayer);
+        L.polyline(S.route.points, { color, weight: 6, opacity: .95, dashArray: S.route.estimate ? '10 10' : null }).addTo(routeLayer);
+    }
+
+    function fitMission() {
+        const pts = [];
+        if (S.route) pts.push(...S.route.points);
+        else if (S.mission) pts.push([S.mission.lat, S.mission.lng]);
+        if (S.pos) pts.push([S.pos.lat, S.pos.lng]);
+        if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 16 });
+    }
+
+    // ===================== Gọi API =====================
+    async function call(method, url, body, retried) {
+        try {
+            return await AW.api(method, url, { token: S.token, body });
+        } catch (e) {
+            // Token 12 giờ hết hạn khi trang mở lâu: xin lại theo phiên đăng nhập web
+            if (e.status === 401 && !retried && await refreshToken()) return call(method, url, body, true);
+            throw e;
+        }
+    }
+
+    async function refreshToken() {
+        try {
+            const t = await AW.api('GET', '/Home/DriverToken');
+            S.token = t.token;
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    // ===================== Vị trí =====================
+    function setPosition(p, source, accuracy) {
+        S.pos = p;
+        S.posSource = source;
+        S.accuracy = accuracy ?? null;
+        drawCar();
+        renderGps();
+        pushLocation(false);
+        checkArrival();
+        const m = S.mission;
+        if (m && m.phase !== 'pickedUp' && !S.route && !S.routeLoading) planRoute(true);
+    }
+
+    function useStation(note) {
+        S.gpsNote = note;
+        if (S.station && (S.posSource === 'none' || S.posSource === 'gps')) setPosition(S.station, 'station');
+        else renderGps();
+    }
+
+    function startLocation() {
+        if (!navigator.geolocation) return useStation('Trình duyệt không hỗ trợ định vị');
+        navigator.geolocation.watchPosition(
+            (p) => { if (!S.sim) setPosition({ lat: p.coords.latitude, lng: p.coords.longitude }, 'gps', p.coords.accuracy); },
+            (err) => { if (!S.sim && S.posSource !== 'gps') useStation(err.code === 1 ? 'Chưa cho phép định vị' : 'Không lấy được GPS'); },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        );
+        // Chờ GPS tối đa 6 giây rồi tạm dùng vị trí trạm để bản đồ không trống
+        setTimeout(() => { if (S.posSource === 'none') useStation('Đang chờ GPS'); }, 6000);
+    }
+
+    function renderGps() {
+        const el = $('gps');
+        el.classList.remove('is-warn', 'is-sim');
+        let text;
+        if (S.posSource === 'sim') { el.classList.add('is-sim'); text = 'Mô phỏng di chuyển'; }
+        else if (S.posSource === 'gps') text = 'GPS' + (S.accuracy ? ' ±' + Math.round(S.accuracy) + ' m' : '');
+        else if (S.posSource === 'station') { el.classList.add('is-warn'); text = (S.gpsNote || 'Không có GPS') + ' · dùng vị trí trạm'; }
+        else { el.classList.add('is-warn'); text = 'Đang lấy vị trí...'; }
+        $('gpsText').textContent = text;
+    }
+
+    function toggleSim() {
+        S.sim = !S.sim;
+        $('btnSim').classList.toggle('is-on', S.sim);
+        $('simHint').hidden = !S.sim;
+        if (S.sim) {
+            if (!S.pos && S.station) S.pos = S.station;
+            S.simIdx = nearestIndex();
+            setPosition(S.pos, 'sim');
+            AW.toast('Bật mô phỏng: xe tự chạy theo lộ trình đang dẫn đường. Bấm lên bản đồ để đặt vị trí xe.', 'info');
+        } else {
+            S.posSource = 'none';
+            useStation('Đang chờ GPS');
+        }
+    }
+
+    function nearestIndex() {
+        if (!S.route || !S.pos) return 0;
+        const r = AW.remainingKm(S.route.points, S.pos);
+        return r ? r.index : 0;
+    }
+
+    // Mỗi 400 ms xe mô phỏng tiến ~35 m dọc lộ trình (~300 km/h, đủ nhanh để demo)
+    function simStep() {
+        if (!S.sim || !S.route || !S.mission || S.mission.phase === 'pickedUp' || !S.pos) return;
+        const pts = S.route.points;
+        let budget = 0.035;
+        let cur = { lat: S.pos.lat, lng: S.pos.lng };
+        while (budget > 0 && S.simIdx < pts.length - 1) {
+            const next = { lat: pts[S.simIdx + 1][0], lng: pts[S.simIdx + 1][1] };
+            const d = AW.haversineKm(cur, next);
+            if (d <= budget) { cur = next; budget -= d; S.simIdx++; }
+            else { const k = budget / d; cur = { lat: cur.lat + (next.lat - cur.lat) * k, lng: cur.lng + (next.lng - cur.lng) * k }; budget = 0; }
+        }
+        if (cur.lat !== S.pos.lat || cur.lng !== S.pos.lng) setPosition(cur, 'sim');
+    }
+
+    function pushLocation(force) {
+        const hub = S.hub;
+        if (!hub || hub.state !== 'Connected' || !S.pos || !S.onDuty || !S.me) return;
+        const now = Date.now();
+        if (!force && now - S.lastPush < (S.sim ? 1500 : 4000)) return;
+        S.lastPush = now;
+        hub.invoke('SendLocationUpdate', S.me.username, S.pos.lat, S.pos.lng).catch(() => { });
+        if (S.mission) hub.invoke('SendDriverLocationToCase', S.mission.caseId, S.me.username, S.pos.lat, S.pos.lng).catch(() => { });
+    }
+
+    function checkArrival() {
+        const m = S.mission;
+        if (!m || m.phase !== 'toPatient' || S.arrived || !S.pos) return;
+        if (AW.haversineKm(S.pos, { lat: m.lat, lng: m.lng }) < 0.08) {
+            S.arrived = true;
+            AW.toast('Đã tới vị trí bệnh nhân. Bấm "Đã đón bệnh nhân" khi bệnh nhân lên xe.', 'success');
+            render();
+        }
+    }
+
+    // ===================== Realtime (SignalR) =====================
+    function setConn(state) {
+        const el = $('conn');
+        el.classList.remove('is-on', 'is-wait');
+        const states = { on: ['is-on', 'Trực tuyến'], wait: ['is-wait', 'Đang kết nối'], off: [null, S.onDuty ? 'Mất kết nối' : 'Ngoại tuyến'] };
+        const [cls, text] = states[state] || states.off;
+        if (cls) el.classList.add(cls);
+        el.querySelector('.aw-dot').classList.toggle('is-live', state === 'on');
+        $('connText').textContent = text;
+    }
+
+    function startHub() {
+        if (S.hub) return;
+        const hub = new signalR.HubConnectionBuilder()
+            .withUrl('/ambulanceHub')
+            .withAutomaticReconnect([0, 2000, 5000, 10000, 20000, 30000])
+            .build();
+        hub.on('ReceiveNewTrip', onNewTrip);
+        hub.on('CaseAlreadyTaken', onCaseTaken);
+        hub.on('SuggestHospitals', onSuggestHospitals);
+        hub.on('HospitalConfirmed', onHospitalConfirmed);
+        hub.on('HospitalCapacityUpdated', () => loadHospitals());
+        hub.on('CaseCancelled', onCaseCancelled);
+        hub.onreconnecting(() => setConn('wait'));
+        hub.onreconnected(async () => {
+            setConn('on');
+            await register();
+            refreshQuietly(); // có thể đã lỡ sự kiện trong lúc mất mạng
+        });
+        hub.onclose(() => {
+            setConn('off');
+            if (S.hub === hub) setTimeout(connectHub, 5000);
+        });
+        S.hub = hub;
+        connectHub();
+    }
+
+    async function connectHub() {
+        const hub = S.hub;
+        if (!hub || hub.state !== 'Disconnected') return;
+        setConn('wait');
+        try {
+            await hub.start();
+            setConn('on');
+            await register();
+        } catch {
+            setConn('off');
+            if (S.hub === hub) setTimeout(connectHub, 5000);
+        }
+    }
+
+    async function register() {
+        // Bắt buộc: máy chủ chỉ gửi SOS cho kết nối đã RegisterDriver
+        try { await S.hub.invoke('RegisterDriver', S.me.username); } catch { }
+        pushLocation(true);
+    }
+
+    function stopHub() {
+        const hub = S.hub;
+        S.hub = null;
+        if (hub) hub.stop().catch(() => { });
+        setConn('off');
+    }
+
+    function onNewTrip(raw) {
+        const d = AW.camel(raw);
+        const req = toPending({
+            caseId: d.caseId, status: 'PENDING', emergencyType: (d.hospital || '').split(':')[0],
+            description: (d.hospital || '').split(':').slice(1).join(':').trim(),
+            address: d.address, lat: d.lat, lng: d.lng, createdAt: new Date().toISOString(), eta: d.etaMinutes
+        });
+        // CaseId = 0 là lệnh điều phối kiểu cũ (bảng AmbulanceTrips), không nhận được qua /api/Sos
+        if (!req.caseId || (S.mission && S.mission.caseId === req.caseId) || !S.onDuty) return;
+        if (!S.pending.some((p) => p.caseId === req.caseId)) S.pending.unshift(req);
+        S.dismissed.delete(req.caseId);
+        drawPending();
+        render();
+        if (!S.mission) openIncoming(req, true);
+        else AW.toast('Có ca cấp cứu mới đang chờ: ' + (req.address || '#' + req.caseId), 'warn');
+    }
+
+    function onCaseTaken(raw) {
+        const d = AW.camel(raw);
+        // Máy chủ phát cho cả nhóm Drivers, kể cả chính tài xế vừa nhận ca
+        if (d.caseId === S.accepting || (S.mission && S.mission.caseId === d.caseId)) return;
+        const had = S.pending.some((p) => p.caseId === d.caseId);
+        S.pending = S.pending.filter((p) => p.caseId !== d.caseId);
+        if (S.incoming && S.incoming.caseId === d.caseId) closeIncoming();
+        if (had) AW.toast('Tài xế ' + (d.takenBy || 'khác') + ' đã nhận ca #' + d.caseId + '.', 'info');
+        drawPending();
+        render();
+    }
+
+    // Bệnh nhân hủy SOS trước khi xe đón
+    function onCaseCancelled(raw) {
+        const d = AW.camel(raw);
+        const why = d.reason ? ' (' + d.reason + ')' : '';
+        if (S.mission && S.mission.caseId === d.caseId) {
+            clearMission();
+            AW.toast('Bệnh nhân đã hủy ca #' + d.caseId + why + '. Bạn có thể nhận ca khác.', 'warn', 8000);
+            AW.beep(2);
+            refreshQuietly();
+        } else if (S.pending.some((p) => p.caseId === d.caseId)) {
+            AW.toast('Ca #' + d.caseId + ' đã được bệnh nhân hủy.', 'info');
+        }
+        S.pending = S.pending.filter((p) => p.caseId !== d.caseId);
+        if (S.incoming && S.incoming.caseId === d.caseId) closeIncoming();
+        drawPending();
+        render();
+    }
+
+    function onSuggestHospitals(raw) {
+        S.notified = new Set(AW.camel(raw || []).map((h) => h.id));
+        render();
+    }
+
+    function onHospitalConfirmed(raw) {
+        const d = AW.camel(raw);
+        const m = S.mission;
+        if (!m || m.phase === 'toPatient') return;
+        if (String(d.status || '').toUpperCase() === 'REJECTED') {
+            AW.toast(d.hospitalName + ' từ chối tiếp nhận' + (d.rejectReason ? ' (' + d.rejectReason + ')' : '') + '. Hãy chọn bệnh viện khác.', 'error');
             return;
         }
-
-        let msg = "Danh sách ca:\n\n";
-        emergencyCases.forEach((c, i) => {
-            msg += (i + 1) + ". " + c.loc + "\n";
-        });
-
-        let choice = prompt(msg + "\nNhập số để nhận ca:");
-
-        if (choice === null) return;
-
-        let index = parseInt(choice) - 1;
-
-        if (index >= 0 && index < emergencyCases.length) {
-            acceptCase(index);
-        }
-    };
-
-    function acceptCase(i) {
-        const c = emergencyCases[i];
-
-        navigator.geolocation.getCurrentPosition(function (p) {
-            if (routingControl) map.removeControl(routingControl);
-
-            routingControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(p.coords.latitude, p.coords.longitude),
-                    L.latLng(c.lat, c.lng)
-                ],
-                createMarker: function () { return null; }
-            }).addTo(map);
-
-            emergencyCases.splice(i, 1);
-            updateBadge();
-        });
+        if (!d.hospitalLat && !d.hospitalLng) return;
+        m.hospital = { name: d.hospitalName, lat: d.hospitalLat, lng: d.hospitalLng, address: d.hospitalAddress || '', room: d.assignedRoom || null, accepted: true };
+        m.phase = 'toHospital';
+        S.epoch++;
+        S.route = null;
+        S.legs.toHospital = null;
+        AW.toast(d.hospitalName + ' đã nhận bệnh nhân' + (d.assignedRoom ? ' — ' + d.assignedRoom : '') + '. Đã chuyển lộ trình về bệnh viện.', 'success', 7000);
+        AW.beep(2);
+        drawMission();
+        render();
+        planRoute();
     }
 
-    window.completeCase = function () {
-        if (routingControl) {
-            map.removeControl(routingControl);
-            routingControl = null;
-            alert("Đã hoàn thành ca 🚑");
+    // ===================== Ca trực =====================
+    async function startDuty() {
+        if (S.busy || S.onDuty) return;
+        AW.unlockSound();
+        S.busy = true;
+        render();
+        try {
+            try {
+                await call('POST', '/api/duty/start', {
+                    HospitalName: S.me.station || '',
+                    StaffName: S.me.driverName || S.me.username,
+                    VehicleNo: String(S.me.vehicle || '').slice(0, 20)
+                });
+            } catch (e) {
+                if (e.status !== 400) throw e; // 400: ca trước chưa đóng thì dùng tiếp
+            }
+            const cur = await call('GET', '/api/duty/current');
+            S.dutyStart = cur && cur.onDuty ? AW.parseServerTime(cur.duty.startTime) : new Date();
+            S.onDuty = true;
+            await goOnline();
+            AW.toast('Đã bắt đầu ca trực. Hệ thống sẽ gửi ca cấp cứu gần bạn.', 'success');
+        } catch (e) {
+            AW.toast(e.message, 'error');
+        } finally {
+            S.busy = false;
+            render();
         }
-    };
+    }
 
-    window.locateUser = function () {
-        coreLocateUser();
-    };
+    async function endDuty(silent) {
+        if (!S.onDuty || S.busy) return false;
+        if (S.mission) { AW.toast('Hãy hoàn thành nhiệm vụ đang làm trước khi kết thúc ca.', 'warn'); return false; }
+        S.busy = true;
+        render();
+        try {
+            try { await call('POST', '/api/duty/end'); } catch (e) { if (e.status !== 400) throw e; }
+            await call('POST', '/api/mobile/driver/status', { Status: 'OFFLINE' });
+            stopHub();
+            S.onDuty = false;
+            S.dutyStart = null;
+            S.pending = [];
+            closeIncoming();
+            drawPending();
+            if (!silent) AW.toast('Đã kết thúc ca trực. Bạn sẽ không nhận ca mới.', 'info');
+            return true;
+        } catch (e) {
+            AW.toast(e.message, 'error');
+            return false;
+        } finally {
+            S.busy = false;
+            render();
+        }
+    }
 
-    window.toggleTheme = function () {
-        coreToggleTheme();
-    };
+    async function goOnline() {
+        startHub();
+        await call('POST', '/api/mobile/driver/status', { Status: 'ONLINE' });
+        await refreshCases();
+    }
 
-    window.endShift = function () {
-        if (confirm("Xác nhận thoát ca?"))
-            window.location.href = '/Account/Logout';
-    };
+    // ===================== Hàng chờ và nhiệm vụ =====================
+    function toPending(c) {
+        return {
+            caseId: Number(c.caseId), status: c.status, type: c.emergencyType || 'Cấp cứu', description: c.description || '',
+            address: c.address || '', lat: Number(c.lat), lng: Number(c.lng), createdAt: AW.parseServerTime(c.createdAt), eta: c.eta
+        };
+    }
 
-    window.toggleRoutePanel = function () {
-        var p = document.querySelector(".leaflet-routing-container");
+    function toMission(c) {
+        let phase = c.status === 'ACCEPTED' ? 'toPatient' : c.status === 'PICKED_UP' ? 'pickedUp' : 'toHospital';
+        const hospital = c.hospital ? { name: c.hospital.name, lat: c.hospital.lat, lng: c.hospital.lng, address: c.hospital.address, phone: c.hospital.phone } : null;
+        if (phase === 'toHospital' && !hospital) phase = 'pickedUp';
+        return {
+            caseId: c.caseId, phase, type: c.emergencyType || 'Cấp cứu', description: c.description || '', address: c.address || '',
+            lat: c.lat, lng: c.lng, patient: c.patient || null, hospital, acceptedAt: AW.parseServerTime(c.acceptedAt)
+        };
+    }
+
+    async function refreshCases() {
+        const epoch = S.epoch;
+        const [active, pending] = await Promise.all([
+            call('GET', '/api/mobile/driver/cases/active'),
+            call('GET', '/api/mobile/driver/cases/pending')
+        ]);
+        // Nếu tài xế vừa thao tác trong lúc chờ thì dữ liệu này đã cũ
+        if (epoch === S.epoch) syncMission(active && active.hasCase ? toMission(active.case) : null);
+        S.pending = (pending || []).map(toPending).filter((p) => !(S.mission && S.mission.caseId === p.caseId));
+        const sig = JSON.stringify([S.pending.map((p) => p.caseId), S.mission && [S.mission.caseId, S.mission.phase, !!S.mission.patient]]);
+        if (sig !== S.sig) {
+            S.sig = sig;
+            drawPending();
+            render();
+        }
+    }
+
+    async function refreshQuietly() {
+        try { await refreshCases(); } catch { /* lần đọc định kỳ sau sẽ thử lại */ }
+    }
+
+    function syncMission(active) {
+        const cur = S.mission;
+        if (!active) { if (cur) { clearMission(); AW.toast('Ca #' + cur.caseId + ' đã kết thúc hoặc được chuyển cho tài xế khác.', 'info'); } return; }
+        if (!cur || cur.caseId !== active.caseId) {
+            clearMission();
+            S.mission = active;
+        } else if (cur.phase !== active.phase) {
+            S.mission = active;
+            S.route = null;
+            S.routeReq++;
+            S.epoch++;
+        } else {
+            if (!cur.patient && active.patient) cur.patient = active.patient;
+            if (!cur.hospital && active.hospital) cur.hospital = active.hospital;
+            return;
+        }
+        drawMission();
+        drawPending();
+        if (S.mission.phase === 'pickedUp') loadOptions();
+        else planRoute(true);
+    }
+
+    function clearMission() {
+        S.epoch++;
+        S.mission = null;
+        S.route = null;
+        S.routeReq++;
+        S.routeLoading = false;
+        S.legs = { toPatient: null, toHospital: null };
+        S.options = [];
+        S.notified = new Set();
+        S.arrived = false;
+        routeLayer.clearLayers();
+        missionLayer.clearLayers();
+    }
+
+    async function acceptCase(caseId) {
+        const req = S.pending.find((p) => p.caseId === caseId) || (S.incoming && S.incoming.caseId === caseId ? S.incoming : null);
+        if (!req || S.busy) return;
+        if (S.mission) return AW.toast('Bạn đang thực hiện một ca khác.', 'warn');
+        S.busy = true;
+        S.accepting = caseId;
+        closeIncoming();
+        render();
+        try {
+            await call('POST', '/api/Sos/' + caseId + '/accept', { DriverUsername: S.me.username });
+            clearMission();
+            S.mission = { caseId, phase: 'toPatient', type: req.type, description: req.description, address: req.address, lat: req.lat, lng: req.lng, patient: null, hospital: null, acceptedAt: new Date() };
+            S.pending = S.pending.filter((p) => p.caseId !== caseId);
+            S.follow = true;
+            $('btnRecenter').classList.add('is-on');
+            drawMission();
+            drawPending();
+            pushLocation(true);
+            AW.toast('Đã nhận ca #' + caseId + '. Đang dẫn đường tới bệnh nhân.', 'success');
+            refreshQuietly(); // lấy hồ sơ y tế của bệnh nhân
+            planRoute(true); // không giữ nút bị khóa trong lúc chờ máy chủ bản đồ
+        } catch (e) {
+            if (e.status) S.pending = S.pending.filter((p) => p.caseId !== caseId); // ca đã có người nhận / đã kết thúc
+            drawPending();
+            AW.toast(e.message, 'error');
+        } finally {
+            S.busy = false;
+            S.accepting = null;
+            render();
+        }
+    }
+
+    async function markPickedUp() {
+        const m = S.mission;
+        if (!m || S.busy) return;
+        const ok = await AW.confirm({
+            title: 'Đã đón bệnh nhân lên xe?', icon: 'fa-user-check', tone: 'is-amber',
+            text: 'Hệ thống sẽ báo cho các bệnh viện trong bán kính 5 km chuẩn bị tiếp nhận.',
+            okText: 'Đã đón', okClass: 'aw-btn-warn'
+        });
+        if (!ok) return;
+        S.busy = true;
+        render();
+        try {
+            await call('PUT', '/api/Sos/' + m.caseId + '/status', { Status: 'PICKED_UP' });
+            m.phase = 'pickedUp';
+            S.epoch++;
+            S.route = null;
+            S.routeReq++;
+            routeLayer.clearLayers();
+            drawMission();
+            AW.toast('Đã báo các bệnh viện gần nhất. Chọn bệnh viện để dẫn đường.', 'success');
+            loadOptions();
+        } catch (e) {
+            missionError(e);
+        } finally {
+            S.busy = false;
+            render();
+        }
+    }
+
+    async function loadHospitals() {
+        try {
+            S.hospitals = AW.camel(await call('GET', '/api/Hospitals') || [])
+                .filter((h) => h.isActive !== false && h.lat && h.lng)
+                .map((h) => Object.assign(h, { lat: Number(h.lat), lng: Number(h.lng) }));
+            drawHospitals();
+        } catch { /* bản đồ vẫn dùng được khi thiếu lớp bệnh viện */ }
+    }
+
+    function isOpen(h) { return !h.receptionStatus || h.receptionStatus === 'OPEN'; }
+
+    async function loadOptions() {
+        S.optionsLoading = true;
+        render();
+        await loadHospitals();
+        const origin = S.pos || (S.mission && { lat: S.mission.lat, lng: S.mission.lng });
+        S.options = S.hospitals.filter(isOpen)
+            .map((h) => Object.assign({}, h, { km: origin ? AW.haversineKm(origin, h) : null }))
+            .sort((a, b) => (a.km ?? 0) - (b.km ?? 0))
+            .slice(0, 6);
+        S.optionsLoading = false;
+        render();
+    }
+
+    async function chooseHospital(id) {
+        const m = S.mission;
+        if (!m || S.busy) return;
+        S.busy = true;
+        render();
+        try {
+            const res = await call('POST', '/api/mobile/driver/cases/' + m.caseId + '/destination', { HospitalId: id });
+            const h = res.hospital;
+            m.hospital = { name: h.name, lat: h.lat, lng: h.lng, address: h.address, phone: h.phone };
+            m.phase = 'toHospital';
+            S.epoch++;
+            S.legs.toHospital = null;
+            drawMission();
+            AW.toast('Đang dẫn đường tới ' + h.name + '.', 'success');
+            planRoute(true);
+        } catch (e) {
+            missionError(e);
+        } finally {
+            S.busy = false;
+            render();
+        }
+    }
+
+    async function completeMission() {
+        const m = S.mission;
+        if (!m || S.busy) return;
+        const km = (S.legs.toPatient?.distanceKm || 0) + (S.legs.toHospital?.distanceKm || 0);
+        const min = (S.legs.toPatient?.minutes || 0) + (S.legs.toHospital?.minutes || 0);
+        const ok = await AW.confirm({
+            title: 'Đã bàn giao bệnh nhân?', icon: 'fa-flag-checkered', tone: 'is-green',
+            html: 'Ca <b>#' + m.caseId + '</b> sẽ được đóng và lưu vào lịch sử chuyến' +
+                (km > 0 ? ' (<b>' + AW.fmtKm(km) + '</b>, khoảng <b>' + AW.fmtMinutes(min) + '</b>)' : '') + '.',
+            okText: 'Hoàn thành', okClass: 'aw-btn-success'
+        });
+        if (!ok) return;
+        S.busy = true;
+        render();
+        try {
+            // Thiếu số liệu lộ trình (ca khôi phục sau khi tải lại trang) thì để máy chủ tự tính
+            await call('PUT', '/api/Sos/' + m.caseId + '/status', {
+                Status: 'COMPLETED',
+                DistanceKm: km > 0 ? Number(km.toFixed(2)) : null,
+                DurationMinutes: min > 0 ? min : null
+            });
+            clearMission();
+            AW.toast('Hoàn thành ca #' + m.caseId + '. Cảm ơn bạn!', 'success');
+            S.historyLoaded = false;
+            refreshQuietly();
+        } catch (e) {
+            missionError(e);
+        } finally {
+            S.busy = false;
+            render();
+        }
+    }
+
+    // Máy chủ từ chối thao tác (ca đã bị xóa / đã kết thúc): đồng bộ lại để không kẹt giao diện
+    function missionError(e) {
+        AW.toast(e.message, 'error');
+        if (e.status) refreshQuietly();
+    }
+
+    // ===================== Lộ trình =====================
+    async function planRoute(fit) {
+        const m = S.mission;
+        if (!m || !S.pos) return;
+        const target = m.phase === 'toPatient' ? { lat: m.lat, lng: m.lng }
+            : m.phase === 'toHospital' && m.hospital ? { lat: m.hospital.lat, lng: m.hospital.lng } : null;
+        if (!target) return;
+
+        const req = ++S.routeReq;
+        const phase = m.phase;
+        const origin = { lat: S.pos.lat, lng: S.pos.lng };
+        S.routeLoading = true;
+        render();
+        const plan = await AW.route(origin, target);
+        // Trong lúc chờ, nhiệm vụ có thể đã đổi chặng hoặc kết thúc
+        if (req !== S.routeReq || S.mission !== m || m.phase !== phase) return;
+
+        S.route = plan;
+        S.routeLoading = false;
+        S.routeOrigin = origin;
+        S.routePlannedAt = Date.now();
+        S.simIdx = 0;
+        if (phase === 'toPatient') S.legs.toPatient = S.legs.toPatient || plan;
+        else S.legs.toHospital = S.legs.toHospital || plan;
+        drawRoute();
+        if (fit) fitMission();
+        render();
+        sendEta(plan.distanceKm, plan.minutes);
+    }
+
+    // Người nhà bệnh nhân và Admin nhận ETA thực tế (sự kiện EtaUpdated)
+    function sendEta(km, minutes) {
+        if (!S.hub || S.hub.state !== 'Connected' || !S.mission) return;
+        S.lastEtaPush = Date.now();
+        S.hub.invoke('SendEtaUpdate', S.mission.caseId, Number(km.toFixed(2)), Math.max(1, Math.round(minutes))).catch(() => { });
+    }
+
+    function progress() {
+        if (!S.route || !S.pos) return null;
+        const r = AW.remainingKm(S.route.points, S.pos);
+        if (!r) return null;
+        const km = Math.min(r.km, S.route.distanceKm * 1.5);
+        const minutes = S.route.distanceKm > 0 ? S.route.minutes * (km / S.route.distanceKm) : S.route.minutes;
+        return { km, minutes: Math.max(1, Math.round(minutes)), offRouteKm: r.offRouteKm };
+    }
+
+    // ===================== Hộp thoại ca mới =====================
+    function openIncoming(req, ring) {
+        if (S.mission) return;
+        S.incoming = req;
+        clearInterval(S.incomingTimer);
+        const dist = S.pos && req.lat ? AW.haversineKm(S.pos, req) : null;
+        $('incKicker').textContent = ring ? 'CA CẤP CỨU MỚI' : 'CA ĐANG CHỜ #' + req.caseId;
+        $('incType').textContent = req.type;
+        $('incDesc').textContent = req.description || 'Không có mô tả thêm.';
+        $('incAddr').textContent = req.address || 'Chưa rõ địa chỉ';
+        $('incDist').textContent = dist != null ? AW.fmtKm(dist * 1.3) : '--';
+        $('incEta').textContent = dist != null ? AW.fmtMinutes(AW.estimateMinutes(dist * 1.3)) : (req.eta ? req.eta + ' phút' : '--');
+        $('incAgo').textContent = AW.fmtClock(req.createdAt);
+        const ringEl = $('incRing');
+        const arc = $('incArc');
+        const circ = 2 * Math.PI * 34;
+        arc.style.strokeDasharray = circ;
+        arc.style.transition = 'none';
+        arc.style.strokeDashoffset = 0;
+        ringEl.classList.toggle('is-static', !ring);
+        $('incoming').hidden = false;
+        $('incAccept').disabled = false;
+        $('incAccept').focus();
+        if (!ring) { $('incCount').innerHTML = '<i class="fa-solid fa-truck-medical"></i>'; return; }
+
+        AW.beep(4);
+        let left = INCOMING_SECONDS;
+        $('incCount').textContent = left;
+        requestAnimationFrame(() => {
+            arc.style.transition = 'stroke-dashoffset 1s linear';
+            arc.style.strokeDashoffset = circ / INCOMING_SECONDS;
+        });
+        S.incomingTimer = setInterval(() => {
+            left--;
+            $('incCount').textContent = Math.max(left, 0);
+            arc.style.strokeDashoffset = circ * (INCOMING_SECONDS - left + 1) / INCOMING_SECONDS;
+            if (left <= 0) {
+                closeIncoming();
+                AW.toast('Ca #' + req.caseId + ' vẫn nằm trong danh sách chờ nếu bạn muốn nhận sau.', 'info');
+            } else if (left % 5 === 0) {
+                AW.beep(1);
+            }
+        }, 1000);
+    }
+
+    function closeIncoming() {
+        clearInterval(S.incomingTimer);
+        S.incoming = null;
+        $('incoming').hidden = true;
+    }
+
+    $('incSkip').onclick = () => closeIncoming();
+    $('incAccept').onclick = () => { if (S.incoming) acceptCase(S.incoming.caseId); };
+    $('incoming').addEventListener('click', (e) => { if (e.target.id === 'incoming') closeIncoming(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('incoming').hidden) closeIncoming(); });
+
+    // ===================== Giao diện =====================
+    function renderMe() {
+        const me = S.me;
+        $('meAvatar').textContent = AW.initials(me.driverName || me.username);
+        $('meName').textContent = me.driverName || me.username;
+        $('meSub').textContent = [me.vehicle && me.vehicle !== 'N/A' ? me.vehicle : null, me.station].filter(Boolean).join(' · ');
+    }
+
+    function render() {
+        const duty = $('btnDuty');
+        duty.disabled = !S.me || S.busy;
+        duty.classList.toggle('is-on', S.onDuty);
+        duty.setAttribute('aria-checked', String(S.onDuty));
+        $('dutyLabel').textContent = S.onDuty ? 'Đang trực' : 'Nghỉ';
+        if (!S.me) return;
+        $('view').innerHTML = !S.onDuty ? viewOffDuty() : S.mission ? viewMission() : viewIdle();
+        const dir = $('view').querySelector('details');
+        if (dir && S.dirOpen) dir.open = true;
+    }
+
+    function viewOffDuty() {
+        return '<div class="dv-card dv-hero">' +
+            '<div class="dv-hero-icon"><i class="fa-solid fa-mug-hot"></i></div>' +
+            '<h3>Bạn đang nghỉ</h3>' +
+            '<p>Bắt đầu ca trực để hệ thống điều phối gửi ca cấp cứu gần vị trí của bạn.</p>' +
+            '<button class="aw-btn aw-btn-primary aw-btn-lg aw-btn-block" data-act="start"' + (S.busy ? ' disabled' : '') + '>' +
+            (S.busy ? '<span class="aw-spin"></span>' : '<i class="fa-solid fa-power-off"></i>') + ' Bắt đầu ca trực</button></div>' +
+            '<div class="dv-card"><h4><i class="fa-solid fa-lightbulb text-warning"></i> Mẹo</h4>' +
+            '<p class="dv-muted mb-0">Mở trang này trên điện thoại hoặc máy tính bảng có GPS để vị trí chính xác. ' +
+            'Không có GPS? Bật <b>Mô phỏng di chuyển</b> (nút <i class="fa-solid fa-person-running"></i> trên bản đồ) để demo.</p></div>';
+    }
+
+    function dutyClock() {
+        if (!S.dutyStart) return '--:--';
+        const s = Math.max(0, Math.floor((Date.now() - S.dutyStart.getTime()) / 1000));
+        const p = (n) => String(n).padStart(2, '0');
+        return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+    }
+
+    function viewIdle() {
+        const open = S.hospitals.filter(isOpen).length;
+        const list = S.pending.filter((p) => !S.dismissed.has(p.caseId));
+        let html = '<div class="dv-card dv-hero" style="padding-top:18px">' +
+            '<div class="dv-radar"><span></span><span></span><span></span><i class="fa-solid fa-truck-medical"></i></div>' +
+            '<h3>Đang chờ ca cấp cứu</h3>' +
+            '<p class="mb-0">Giữ trang này mở. Khi có SOS gần bạn, màn hình sẽ báo kèm âm thanh.</p></div>' +
+            '<div class="dv-stats">' +
+            '<div class="dv-stat"><b id="dutyClock">' + dutyClock() + '</b><small>Thời gian trực</small></div>' +
+            '<div class="dv-stat"><b>' + list.length + '</b><small>Ca đang chờ</small></div>' +
+            '<div class="dv-stat"><b>' + open + '</b><small>Bệnh viện mở</small></div></div>';
+        html += '<div class="dv-label"><span>Ca đang chờ nhận</span>' +
+            '<button class="dv-icon-btn" style="width:30px;height:30px" data-act="refresh" title="Tải lại"><i class="fa-solid fa-rotate"></i></button></div>';
+        if (!list.length) {
+            html += '<div class="dv-card dv-muted" style="text-align:center">Chưa có ca nào. Ca mới sẽ hiện ở đây.</div>';
+        } else {
+            html += list.map((p) => {
+                const d = S.pos && p.lat ? AW.haversineKm(S.pos, p) * 1.3 : null;
+                return '<div class="dv-req">' +
+                    '<div class="dv-req-top"><b>' + esc(p.type) + '</b><span class="aw-chip">#' + p.caseId + (p.status === 'ASSIGNED' ? ' · Được chỉ định' : '') + '</span></div>' +
+                    (p.description ? '<p>' + esc(p.description) + '</p>' : '') +
+                    '<div class="dv-req-meta"><span><i class="fa-solid fa-location-dot"></i> ' + esc(p.address || 'Chưa rõ địa chỉ') + '</span>' +
+                    (d != null ? '<span><i class="fa-solid fa-route"></i> ' + AW.fmtKm(d) + '</span>' : '') +
+                    '<span><i class="fa-regular fa-clock"></i> ' + AW.timeAgo(p.createdAt) + '</span></div>' +
+                    '<div class="dv-req-actions">' +
+                    '<button class="aw-btn aw-btn-light aw-btn-sm" data-act="hide" data-id="' + p.caseId + '">Ẩn</button>' +
+                    '<button class="aw-btn aw-btn-primary aw-btn-sm" data-act="accept" data-id="' + p.caseId + '"' + (S.busy ? ' disabled' : '') + '>' +
+                    (S.accepting === p.caseId ? '<span class="aw-spin"></span>' : '<i class="fa-solid fa-check"></i>') + ' Nhận ca</button></div></div>';
+            }).join('');
+        }
+        return html;
+    }
+
+    function steps(phase) {
+        const order = ['toPatient', 'pickedUp', 'toHospital', 'done'];
+        const idx = order.indexOf(phase);
+        const items = [['fa-truck-medical', 'Đến đón'], ['fa-user-check', 'Đã đón'], ['fa-hospital', 'Về viện'], ['fa-flag-checkered', 'Bàn giao']];
+        return '<div class="dv-steps">' + items.map((it, i) =>
+            '<div class="dv-step ' + (i < idx ? 'is-done' : i === idx ? 'is-now' : '') + '"><i class="fa-solid ' + (i < idx ? 'fa-check' : it[0]) + '"></i>' + it[1] + '</div>'
+        ).join('') + '</div>';
+    }
+
+    function age(birth) {
+        const d = birth ? new Date(birth) : null;
+        if (!d || isNaN(d)) return null;
+        const n = new Date();
+        let a = n.getFullYear() - d.getFullYear();
+        if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--;
+        return a >= 0 && a < 130 ? a : null;
+    }
+
+    function tel(phone, label) {
+        const clean = String(phone || '').replace(/[^\d+]/g, '');
+        if (clean.length < 8) return esc(phone || '--');
+        return '<a class="dv-call" href="tel:' + clean + '"><i class="fa-solid fa-phone"></i> ' + esc(label || phone) + '</a>';
+    }
+
+    function etaHtml(prog) {
+        if (!prog) return '<b>--</b>';
+        const at = new Date(Date.now() + prog.minutes * 60000);
+        return '<b>' + AW.fmtMinutes(prog.minutes) + '</b><span>' + AW.fmtKm(prog.km) + ' · đến lúc ' + AW.fmtClock(at) + '</span>';
+    }
+
+    function viewMission() {
+        const m = S.mission;
+        let html = steps(m.phase);
+
+        // Thẻ thời gian dự kiến
+        const prog = progress();
+        if (m.phase === 'pickedUp') {
+            html += '<div class="dv-eta is-wait"><div class="dv-eta-kicker">Ca #' + m.caseId + ' · Đã đón bệnh nhân</div>' +
+                '<div class="dv-eta-main"><b style="font-size:1.5rem">Chọn bệnh viện</b></div>' +
+                '<div class="dv-eta-addr"><i class="fa-solid fa-circle-info"></i><span>Các bệnh viện gần nhất đã được báo. Chọn nơi đến, hoặc chờ bệnh viện xác nhận tiếp nhận.</span></div></div>';
+        } else {
+            const toH = m.phase === 'toHospital';
+            html += '<div class="dv-eta' + (toH ? ' is-hospital' : '') + '">' +
+                '<div class="dv-eta-kicker">Ca #' + m.caseId + ' · ' + (toH ? 'Đưa bệnh nhân về viện' : S.arrived ? 'Đã tới nơi' : 'Đến đón bệnh nhân') + '</div>' +
+                (S.routeLoading && !S.route
+                    ? '<div class="dv-eta-main"><span class="aw-spin"></span><span>Đang tính lộ trình...</span></div>'
+                    : '<div class="dv-eta-main" id="etaMain">' + etaHtml(prog) + '</div>') +
+                (S.route && S.route.estimate ? '<div style="font-size:.78rem;opacity:.85"><i class="fa-solid fa-triangle-exclamation"></i> Không tải được bản đồ đường, đang ước lượng theo đường thẳng</div>' : '') +
+                '<div class="dv-eta-addr"><i class="fa-solid ' + (toH ? 'fa-hospital' : 'fa-location-dot') + '"></i><span>' +
+                esc(toH ? (m.hospital.name + (m.hospital.address ? ' — ' + m.hospital.address : '')) : (m.address || 'Chưa rõ địa chỉ')) + '</span></div></div>';
+        }
+
+        // Hành động chính
+        if (m.phase === 'toPatient') {
+            html += '<button class="aw-btn aw-btn-warn aw-btn-lg aw-btn-block mb-3" data-act="picked"' + (S.busy ? ' disabled' : '') + '>' +
+                (S.busy ? '<span class="aw-spin"></span>' : '<i class="fa-solid fa-user-check"></i>') + ' Đã đón bệnh nhân</button>';
+        } else if (m.phase === 'toHospital') {
+            html += '<button class="aw-btn aw-btn-success aw-btn-lg aw-btn-block mb-3" data-act="complete"' + (S.busy ? ' disabled' : '') + '>' +
+                (S.busy ? '<span class="aw-spin"></span>' : '<i class="fa-solid fa-flag-checkered"></i>') + ' Đã bàn giao — Hoàn thành</button>';
+        }
+
+        // Bệnh viện đích
+        if (m.phase === 'toHospital' && m.hospital) {
+            const h = m.hospital;
+            html += '<div class="dv-card"><h4><i class="fa-solid fa-hospital" style="color:#4ade80"></i> ' + esc(h.name) +
+                (h.accepted ? ' <span class="aw-chip is-green">Đã xác nhận</span>' : '') + '</h4><div class="dv-kv">' +
+                (h.room ? '<i class="fa-solid fa-door-open"></i><span>Đưa vào: <b style="color:#fff">' + esc(h.room) + '</b></span>' : '') +
+                (h.address ? '<i class="fa-solid fa-location-dot"></i><span>' + esc(h.address) + '</span>' : '') +
+                (h.phone ? '<i class="fa-solid fa-phone"></i><span>' + tel(h.phone) + '</span>' : '') +
+                '</div></div>';
+        }
+
+        if (m.phase === 'pickedUp') {
+            html += '<div class="dv-label"><span>Bệnh viện đang nhận bệnh gần nhất</span></div>';
+            if (S.optionsLoading && !S.options.length) html += '<div class="dv-card dv-muted"><span class="aw-spin"></span> Đang tải danh sách bệnh viện...</div>';
+            else if (!S.options.length) html += '<div class="dv-card dv-muted">Không có bệnh viện nào đang mở. Liên hệ điều phối viên.</div>';
+            html += S.options.map((h) =>
+                '<button class="dv-hosp" data-act="hospital" data-id="' + h.id + '"' + (S.busy ? ' disabled' : '') + '>' +
+                '<span class="dv-hosp-ic"><i class="fa-solid fa-hospital"></i></span>' +
+                '<span class="dv-hosp-text"><b>' + esc(h.name) + '</b><small>' + (h.km != null ? AW.fmtKm(h.km) + ' · ' : '') +
+                (h.availableEmergencyBeds != null ? h.availableEmergencyBeds + ' giường trống' : 'Đang nhận bệnh') + '</small></span>' +
+                (S.notified.has(h.id) ? '<span class="aw-chip is-blue">Đã báo</span>' : '') +
+                '<i class="fa-solid fa-chevron-right" style="color:#475569"></i></button>'
+            ).join('');
+        }
+
+        // Bệnh nhân
+        const p = m.patient;
+        html += '<div class="dv-card"><h4><i class="fa-solid fa-user-injured" style="color:#f87171"></i> ' + esc(m.type) + '</h4>' +
+            (m.description ? '<p style="color:#e2e8f0;font-size:.9rem;margin:0 0 12px">' + esc(m.description) + '</p>' : '') + '<div class="dv-kv">';
         if (p) {
-            var isHidden = p.style.display === "none";
-            p.style.display = isHidden ? "block" : "none";
-            document.getElementById("toggleRoute").innerText =
-                isHidden ? "✕ Hiện chỉ đường" : "✕ Ẩn chỉ đường";
+            const a = age(p.birthDate);
+            html += '<i class="fa-solid fa-id-card"></i><span><b style="color:#fff">' + esc(p.fullName) + '</b>' +
+                [p.gender, a != null ? a + ' tuổi' : null].filter(Boolean).map((x) => ' · ' + esc(x)).join('') + '</span>' +
+                '<i class="fa-solid fa-phone"></i><span>' + tel(p.phoneNumber) + '</span>' +
+                '<i class="fa-solid fa-pills is-alert"></i><span class="' + (p.drugAllergies ? 'is-alert' : '') + '">Dị ứng thuốc: ' + esc(p.drugAllergies || 'không ghi nhận') + '</span>' +
+                '<i class="fa-solid fa-notes-medical"></i><span>Tiền sử: ' + esc(p.medicalHistory || 'không ghi nhận') + '</span>' +
+                (p.emergencyContactName ? '<i class="fa-solid fa-people-roof"></i><span>Người nhà: ' + esc(p.emergencyContactName) + ' · ' + tel(p.emergencyContactPhone) + '</span>' : '');
+        } else {
+            html += '<i class="fa-solid fa-location-dot"></i><span>' + esc(m.address || 'Chưa rõ địa chỉ') + '</span>' +
+                '<i class="fa-solid fa-circle-notch fa-spin"></i><span class="dv-muted">Đang tải hồ sơ y tế...</span>';
         }
+        html += '</div></div>';
+
+        // Chỉ dẫn từng bước
+        if (S.route && S.route.steps.length && m.phase !== 'pickedUp') {
+            html += '<details class="dv-card"><summary><span><i class="fa-solid fa-diamond-turn-right"></i> Chỉ dẫn từng bước</span><small class="dv-muted">' + S.route.steps.length + ' bước</small></summary><ol class="dv-dir">' +
+                S.route.steps.map((s) => '<li><i class="fa-solid ' + s.icon + '"></i><span>' + esc(s.text) + '</span><small>' + (s.distance > 0 ? AW.fmtKm(s.distance / 1000) : '') + '</small></li>').join('') +
+                '</ol></details>';
+        }
+        return html;
+    }
+
+    // ----- Lịch sử chuyến -----
+    async function loadHistory() {
+        const el = $('history');
+        el.innerHTML = '<div class="dv-card dv-muted"><span class="aw-spin"></span> Đang tải lịch sử...</div>';
+        try {
+            const d = await call('GET', '/api/mobile/driver/trips?page=1&pageSize=50');
+            S.historyLoaded = true;
+            const rows = d.data || [];
+            let html = '<div class="dv-stats" style="grid-template-columns:repeat(2,1fr)">' +
+                '<div class="dv-stat"><b>' + d.total + '</b><small>Chuyến đã hoàn thành</small></div>' +
+                '<div class="dv-stat"><b>' + AW.fmtKm(Number(d.totalDistanceKm || 0)) + '</b><small>Tổng quãng đường</small></div></div>';
+            if (!rows.length) html += '<div class="dv-card dv-muted" style="text-align:center">Chưa có chuyến nào. Chuyến hoàn thành sẽ hiện ở đây.</div>';
+            else html += '<div class="dv-card" style="padding:4px 16px">' + rows.map((t) =>
+                '<div class="dv-trip"><span class="dv-trip-ic"><i class="fa-solid fa-flag-checkered"></i></span><div style="min-width:0">' +
+                '<b>' + esc(t.hospitalName || 'Bệnh viện') + '</b>' +
+                '<small>' + esc(t.patientAddress || '') + '</small>' +
+                '<small>' + AW.fmtDateTime(AW.parseServerTime(t.completedAt || t.createdAt)) + ' · ' + AW.fmtKm(Number(t.distanceKm || 0)) + ' · ' + AW.fmtMinutes(t.durationMinutes) + '</small>' +
+                '</div></div>').join('') + '</div>';
+            el.innerHTML = html;
+        } catch (e) {
+            el.innerHTML = '<div class="dv-card" style="color:#fca5a5">' + esc(e.message) + '</div>';
+        }
+    }
+
+    // ----- Sự kiện giao diện -----
+    $('view').addEventListener('toggle', (e) => { if (e.target.tagName === 'DETAILS') S.dirOpen = e.target.open; }, true);
+
+    $('view').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-act]');
+        if (!b || b.disabled) return;
+        const id = Number(b.dataset.id);
+        switch (b.dataset.act) {
+            case 'start': startDuty(); break;
+            case 'accept': acceptCase(id); break;
+            case 'hide': S.dismissed.add(id); render(); break;
+            case 'refresh': refreshQuietly(); break;
+            case 'picked': markPickedUp(); break;
+            case 'hospital': chooseHospital(id); break;
+            case 'complete': completeMission(); break;
+        }
+    });
+
+    document.querySelector('.dv-tabs').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-tab]');
+        if (!b) return;
+        S.tab = b.dataset.tab;
+        document.querySelectorAll('.dv-tabs button').forEach((x) => x.classList.toggle('is-active', x === b));
+        $('tab-mission').hidden = S.tab !== 'mission';
+        $('tab-history').hidden = S.tab !== 'history';
+        if (S.tab === 'history') loadHistory();
+    });
+
+    $('btnDuty').onclick = async () => {
+        if (!S.onDuty) return startDuty();
+        const ok = await AW.confirm({
+            title: 'Kết thúc ca trực?', icon: 'fa-power-off',
+            text: 'Bạn sẽ không nhận được ca cấp cứu mới cho tới khi bắt đầu ca trực lại.',
+            okText: 'Kết thúc ca'
+        });
+        if (ok) endDuty(false);
     };
 
-    document.addEventListener("DOMContentLoaded", function () {
-        initAmbulanceMap();
-        updateBadge();
-    });
+    $('btnLogout').onclick = async () => {
+        if (S.mission) return AW.toast('Hãy hoàn thành nhiệm vụ đang làm trước khi đăng xuất.', 'warn');
+        if (S.onDuty) {
+            const ok = await AW.confirm({
+                title: 'Kết thúc ca trực và đăng xuất?', icon: 'fa-right-from-bracket',
+                text: 'Ca trực sẽ được đóng để điều phối viên biết bạn không còn sẵn sàng.',
+                okText: 'Đăng xuất'
+            });
+            if (!ok || !(await endDuty(true))) return;
+        }
+        location.href = '/Account/Logout';
+    };
+
+    document.addEventListener('pointerdown', AW.unlockSound, { once: true });
+
+    // ===================== Vòng lặp định kỳ =====================
+    let tickCount = 0;
+    setInterval(() => {
+        tickCount++;
+        const clock = document.getElementById('dutyClock');
+        if (clock) clock.textContent = dutyClock();
+        if (S.mission && S.route) {
+            const prog = progress();
+            // Lệch tuyến hơn 150 m (GPS thật) thì tính lại lộ trình, tối đa 20 giây một lần
+            if (prog && S.posSource === 'gps' && prog.offRouteKm > 0.15 && Date.now() - S.routePlannedAt > 20000) planRoute(false);
+            else if (prog && Date.now() - S.lastEtaPush > 20000) sendEta(prog.km, prog.minutes);
+            const el = document.getElementById('etaMain');
+            if (el && tickCount % 2 === 0 && prog) el.innerHTML = etaHtml(prog);
+        }
+        pushLocation(false);
+    }, 1000);
+    setInterval(simStep, 400);
+    setInterval(() => { if (S.onDuty && !document.hidden) refreshQuietly(); }, 20000);
+
+    // ===================== Khởi động =====================
+    function fatal(message, admin) {
+        $('meAvatar').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        $('meName').textContent = 'Không mở được bảng nhiệm vụ';
+        $('view').innerHTML = '<div class="dv-card dv-hero"><div class="dv-hero-icon"><i class="fa-solid fa-user-lock"></i></div>' +
+            '<h3>' + esc(message) + '</h3><p>Đăng nhập bằng tài khoản tài xế để nhận ca cấp cứu.</p>' +
+            '<a class="aw-btn aw-btn-primary aw-btn-block" href="/Account/Logout">Đăng nhập lại</a>' +
+            (admin ? '<a class="aw-btn aw-btn-ghost aw-btn-block mt-2" style="color:#cbd5e1" href="/Admin/Index">Về trang quản trị</a>' : '') + '</div>';
+    }
+
+    (async function init() {
+        renderGps();
+        try {
+            const t = await AW.api('GET', '/Home/DriverToken');
+            S.token = t.token;
+            S.me = await call('GET', '/api/mobile/driver/me');
+        } catch (e) {
+            fatal(e.message, e.status === 403);
+            return;
+        }
+        S.station = { lat: Number(S.me.stationLat), lng: Number(S.me.stationLng) };
+        renderMe();
+        map.setView([S.station.lat, S.station.lng], 14);
+        L.marker([S.station.lat, S.station.lng], { icon: AW.icons.me() })
+            .bindTooltip('Trạm: ' + esc(S.me.station), { className: 'aw-tip', direction: 'top', offset: [0, -18] }).addTo(map);
+        render();
+        loadHospitals();
+        startLocation();
+        try {
+            const duty = await call('GET', '/api/duty/current');
+            if (duty && duty.onDuty) {
+                // Ca trực còn mở (tải lại trang, hoặc đang trực trên app): tiếp tục ca đó
+                S.onDuty = true;
+                S.dutyStart = AW.parseServerTime(duty.duty.startTime);
+                await goOnline();
+            }
+        } catch (e) {
+            AW.toast(e.message, 'error');
+        }
+        render();
+    })();
+})();
 </script>
 }

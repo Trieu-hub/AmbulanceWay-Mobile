@@ -1,30 +1,189 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@{
+    var role = Context.Session.GetInt32("ROLE");
+    var staff = Context.Session.GetString("STAFF") ?? Context.Session.GetString("HOSPITAL_NAME");
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    string Active(string c, string a) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && string.Equals(action, a, StringComparison.OrdinalIgnoreCase)
+            ? "active" : "";
+    var roleName = role switch { 1 => "Quản trị viên", 2 => "Tài xế", 3 => "Bệnh viện", _ => "Khách" };
+    var homeUrl = role switch { 2 => "/Home/Map", 3 => "/HospitalPortal/Dashboard", _ => "/Admin/Index" };
+    // Trang muốn tràn hết khung (ví dụ bảng điều phối) đặt ViewData["Flush"] = true
+    var flush = ViewData["Flush"] is true;
+}
+<!DOCTYPE html>
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - AmbulanceWay</title>
-    <script type="importmap"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b1220">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Leaflet nạp trong head để site.js không báo "L is not defined" -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/AmbulanceWay.styles.css" asp-append-version="true" />
-    <link rel="icon" href="/nut.ico?v=3" />
+    <link rel="stylesheet" href="~/css/aw-admin.css" asp-append-version="true" />
 </head>
-<body>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+<body class="aw-body">
+    <div class="aw-shell">
+        <aside class="aw-sidebar" id="awSidebar">
+            <a class="aw-brand" href="@homeUrl">
+                <span class="aw-brand-mark"><i class="fa-solid fa-truck-medical"></i></span>
+                <span><b>AmbulanceWay</b><small>Trung tâm điều phối cấp cứu</small></span>
+            </a>
+
+            <nav class="aw-nav">
+                @if (role == 1)
+                {
+                    <div class="aw-nav-label">Điều phối</div>
+                    <a class="aw-nav-link @Active("Admin", "Index")" href="/Admin/Index">
+                        <i class="fa-solid fa-satellite-dish"></i> Bảng điều phối
+                    </a>
+                    <a class="aw-nav-link @Active("Admin", "Map")" href="/Admin/Map" target="_blank" title="Mở bản đồ toàn màn hình ở tab mới (giám sát đa màn hình)">
+                        <i class="fa-solid fa-map-location-dot"></i> Bản đồ toàn cảnh
+                        <i class="fa-solid fa-arrow-up-right-from-square aw-ext"></i>
+                    </a>
+
+                    <div class="aw-nav-label">Quản lý</div>
+                    <a class="aw-nav-link @Active("Admin", "Hospitals")" href="/Admin/Hospitals">
+                        <i class="fa-solid fa-hospital"></i> Bệnh viện
+                    </a>
+                    <a class="aw-nav-link @Active("Admin", "UserManagement")" href="/Admin/UserManagement">
+                        <i class="fa-solid fa-users-gear"></i> Tài xế & tài khoản
+                    </a>
+                    <a class="aw-nav-link @Active("Admin", "TripHistory")" href="/Admin/TripHistory">
+                        <i class="fa-solid fa-chart-line"></i> Thống kê & lịch sử
+                    </a>
+                }
+                else if (role == 2)
+                {
+                    <div class="aw-nav-label">Tài xế</div>
+                    <a class="aw-nav-link @Active("Home", "Map")" href="/Home/Map">
+                        <i class="fa-solid fa-map-location-dot"></i> Bản đồ nhiệm vụ
+                    </a>
+                }
+                else if (role == 3)
+                {
+                    <div class="aw-nav-label">Bệnh viện</div>
+                    <a class="aw-nav-link active" href="/HospitalPortal/Dashboard">
+                        <i class="fa-solid fa-bed-pulse"></i> Tiếp nhận bệnh nhân
+                    </a>
+                }
+                else
+                {
+                    <a class="aw-nav-link" href="/Account/Login">
+                        <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập
+                    </a>
+                }
+            </nav>
+
+            @if (staff != null)
+            {
+                <div class="aw-sidebar-foot">
+                    <div class="aw-avatar">@staff.Substring(0, 1)</div>
+                    <div class="aw-user"><b>@staff</b><small>@roleName</small></div>
+                    <a class="aw-logout" href="/Account/Logout" title="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></a>
+                </div>
+            }
+        </aside>
+        <div class="aw-backdrop" onclick="document.body.classList.remove('aw-nav-open')"></div>
+
+        <div class="aw-main">
+            <header class="aw-topbar">
+                <button class="aw-menu-btn" type="button" aria-label="Mở menu" onclick="document.body.classList.toggle('aw-nav-open')">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <div class="aw-crumb">AmbulanceWay · @roleName</div>
+                    <div class="aw-page-title">@ViewData["Title"]</div>
+                </div>
+                <div class="aw-topbar-right">
+                    <span class="aw-pill" id="awNetPill"><span class="dot"></span><span id="awNetText">Trực tuyến</span></span>
+                    <span class="aw-clock" id="awClock"></span>
+                </div>
+            </header>
+
+            <main role="main" class="aw-content @(flush ? "aw-flush" : "")">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - AmbulanceWay - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <!-- Thông báo trạng thái mạng -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="networkToast" class="toast align-items-center text-bg-warning border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-wifi me-2"></i>Kết nối mạng...
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
         </div>
-    </footer>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @* Các trang Admin (Index, Map) và cổng bệnh viện dùng signalR.HubConnectionBuilder nên phải nạp thư viện trước section Scripts *@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        // Đồng hồ trên thanh tiêu đề
+        (function tick() {
+            const el = document.getElementById('awClock');
+            if (el) el.textContent = new Date().toLocaleString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' });
+            setTimeout(tick, 1000);
+        })();
+
+        function setNetPill(online) {
+            const pill = document.getElementById('awNetPill');
+            if (!pill) return;
+            pill.classList.toggle('offline', !online);
+            document.getElementById('awNetText').textContent = online ? 'Trực tuyến' : 'Mất kết nối';
+        }
+        setNetPill(navigator.onLine);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').then(function (registration) {
+                    console.log('SW registered v17:', registration.scope);
+
+                    // PWA install prompt
+                    let deferredPrompt;
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        deferredPrompt = e;
+                    });
+
+                    document.querySelector('.install-btn')?.addEventListener('click', async () => {
+                        if (deferredPrompt) {
+                            deferredPrompt.prompt();
+                            await deferredPrompt.userChoice;
+                            deferredPrompt = null;
+                        }
+                    });
+                }).catch(err => console.error('SW fail:', err));
+            });
+        }
+
+        window.addEventListener('online', () => { setNetPill(true); showNetworkStatus('Trực tuyến'); });
+        window.addEventListener('offline', () => { setNetPill(false); showNetworkStatus('Ngoại tuyến'); });
+
+        function showNetworkStatus(status) {
+            const toast = document.querySelector('#networkToast .toast-body');
+            if (toast) toast.textContent = `Kết nối: ${status}`;
+            new bootstrap.Toast(document.getElementById('networkToast')).show();
+        }
+    </script>
 </body>
 </html>

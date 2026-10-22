@@ -1,0 +1,396 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Bảng điều phối";
+    ViewData["Flush"] = true;
+    var recentCases = ViewBag.RecentCases as List<AmbulanceWay.Models.EmergencyCase>;
+    var openCases = recentCases?.Where(c => c.Status != "COMPLETED" && c.Status != "CANCELLED").ToList()
+                    ?? new List<AmbulanceWay.Models.EmergencyCase>();
+}
+
+<!-- Load Leaflet before scripts -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    /* Trung tâm điều phối: nền tối để bản đồ và ca SOS nổi bật trên màn hình giám sát */
+    .cc { display: flex; flex-direction: column; height: calc(100vh - var(--aw-topbar-h)); background: #0b1220; color: #e2e8f0; padding: 16px; gap: 14px; }
+    .cc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .cc-kpi { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #111827; border: 1px solid #1f2937; border-radius: 14px; }
+    .cc-kpi-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; }
+    .cc-kpi-val { font-size: 1.6rem; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+    .cc-kpi-label { font-size: .78rem; color: #94a3b8; margin-top: 4px; }
+    .tone-red { background: rgba(239, 68, 68, .15); color: #f87171; }
+    .tone-amber { background: rgba(245, 158, 11, .15); color: #fbbf24; }
+    .tone-green { background: rgba(34, 197, 94, .15); color: #4ade80; }
+    .tone-blue { background: rgba(56, 189, 248, .15); color: #38bdf8; }
+
+    .dispatch-container { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 14px; }
+    .cc-side { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .cc-side > .panel:first-child { flex: 3; }
+    .cc-side > .panel:last-child { flex: 2; }
+    .panel { background: #111827; border-radius: 16px; border: 1px solid #1f2937; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid #1f2937; font-weight: 700; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: #e2e8f0; }
+    .panel-header .chip { width: 30px; height: 30px; border-radius: 9px; display: inline-grid; place-items: center; margin-right: 10px; font-size: 14px; }
+    .panel-title { display: flex; align-items: center; }
+    .btn-xs { padding: 4px 10px; font-size: .75rem; border-radius: 8px; }
+    .panel-header .btn-xs, .panel-header .badge { white-space: nowrap; text-transform: none; letter-spacing: 0; }
+    #admin-map { flex: 1; min-height: 320px; }
+
+    .sos-queue { flex: 1; overflow-y: auto; padding: 12px; }
+    .sos-empty { text-align: center; color: #64748b; padding: 48px 12px; }
+    .sos-empty i { font-size: 34px; display: block; margin-bottom: 10px; color: #334155; }
+    .sos-item { position: relative; padding: 14px 14px 14px 16px; background: #0f172a; border: 1px solid #1f2937; border-left: 4px solid #ef4444; margin-bottom: 10px; border-radius: 12px; transition: transform .15s, border-color .15s, background .15s; cursor: pointer; animation: sos-in .35s ease; }
+    .sos-item.is-active { border-left-color: #38bdf8; }
+    .sos-item:hover { transform: translateY(-2px); background: #131c31; border-color: #334155; }
+    .sos-item .text-muted { color: #64748b !important; }
+    .sos-item .text-white-50 { color: #94a3b8 !important; }
+    .sos-item .text-info { color: #7dd3fc !important; }
+    .sos-item .btn-outline-light { border-color: #334155; color: #cbd5e1; }
+    .sos-item .btn-outline-light:hover { background: #1e293b; color: #fff; }
+    .btn-delete-sos { position: absolute; top: 8px; right: 10px; color: #475569; padding: 0; line-height: 1; z-index: 10; }
+    .btn-delete-sos:hover { color: #f87171 !important; }
+    .sos-item.waiting { animation: blink 1.6s infinite; border-left-color: #f59e0b; }
+    @@keyframes blink { 50% { box-shadow: 0 0 0 3px rgba(245, 158, 11, .35); } }
+    @@keyframes sos-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    .timeline { padding: 8px 14px; font-size: .84rem; overflow-y: auto; flex: 1; }
+    .log-entry { padding: 9px 0 9px 14px; border-left: 2px solid #1f2937; display: flex; gap: 10px; position: relative; }
+    .log-entry::before { content: ''; position: absolute; left: -5px; top: 15px; width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; }
+    .log-time { color: #64748b; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .timeline .text-muted { color: #64748b !important; }
+
+    @@media (max-width: 991.98px) {
+        .cc { height: auto; }
+        .cc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .cc { padding: 12px; }
+        .cc-kpi { padding: 12px; gap: 10px; }
+        .cc-kpi-icon { width: 38px; height: 38px; }
+        /* Trên điện thoại không cần mở bản đồ ở tab thứ hai */
+        .panel-header a[href="/Admin/Map"] { display: none; }
+        .dispatch-container { grid-template-columns: 1fr; }
+        .cc-side > .panel { min-height: 300px; }
+        #admin-map { height: 360px; flex: none; }
+        .sos-queue { max-height: 480px; }
+    }
+</style>
+
+<div class="cc">
+    <div class="cc-kpis">
+        <div class="cc-kpi">
+            <div class="cc-kpi-icon tone-red"><i class="fas fa-truck-medical"></i></div>
+            <div><div class="cc-kpi-val" id="kpi-open">@openCases.Count</div><div class="cc-kpi-label">Ca đang chờ / đang xử lý</div></div>
+        </div>
+        <div class="cc-kpi">
+            <div class="cc-kpi-icon tone-green"><i class="fas fa-user-nurse"></i></div>
+            <div><div class="cc-kpi-val">@(ViewBag.ActiveDrivers ?? 0)</div><div class="cc-kpi-label">Tài xế đang trực tuyến</div></div>
+        </div>
+        <div class="cc-kpi">
+            <div class="cc-kpi-icon tone-blue"><i class="fas fa-flag-checkered"></i></div>
+            <div><div class="cc-kpi-val">@(ViewBag.CompletedTrips ?? 0)</div><div class="cc-kpi-label">Chuyến đã hoàn thành</div></div>
+        </div>
+        <div class="cc-kpi">
+            <div class="cc-kpi-icon tone-amber"><i class="fas fa-bell"></i></div>
+            <div><div class="cc-kpi-val">@(ViewBag.TotalCases ?? 0)</div><div class="cc-kpi-label">Tổng số ca SOS</div></div>
+        </div>
+    </div>
+
+    <div class="dispatch-container">
+        <!-- Màn hình 1: Bản đồ toàn thành phố -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title"><span class="chip tone-blue"><i class="fas fa-map-marked-alt"></i></span> Bản đồ thời gian thực</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="active-drivers-count" class="badge bg-success">0 xe đang chạy</span>
+                    <a href="/Admin/Map" target="_blank" class="btn btn-xs btn-outline-light" title="Mở bản đồ toàn màn hình ở tab khác phục vụ giám sát đa màn hình">
+                        <i class="fas fa-external-link-alt"></i> Đa màn hình
+                    </a>
+                </div>
+            </div>
+            <div id="admin-map" class="aw-dark-tiles"></div>
+        </div>
+
+        <div class="cc-side">
+        <!-- Màn hình 2: Queue Điều phối & Escalation -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title"><span class="chip tone-red"><i class="fas fa-list-ul"></i></span> Danh sách SOS chờ</span>
+            </div>
+            <div class="sos-queue" id="sos-queue">
+                @if (openCases.Any())
+                {
+                    foreach (var item in openCases)
+                    {
+                        var statusClass = item.Status == "OPEN" || item.Status == "PENDING" ? "is-open" : "is-active";
+                        <div class="sos-item @statusClass" id="sos-@item.Id">
+                            <button class="btn btn-link btn-delete-sos" onclick="deleteCase(@item.Id)" title="Xóa ca này">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge @(item.Status == "OPEN" || item.Status == "PENDING" ? "bg-danger" : "bg-info")">@item.Status</span>
+                                <small class="text-muted" style="margin-right: 18px;">@item.CreatedAt.ToLocalTime().ToString("HH:mm")</small>
+                            </div>
+                            <div class="mt-2"><strong>@item.EmergencyType</strong></div>
+                            <div class="small text-white-50">@item.Description</div>
+                            <div class="small text-info"><i class="fas fa-map-marker-alt"></i> @item.PatientAddress</div>
+                            @if (item.Status == "ACCEPTED" || item.Status == "PICKED_UP" || item.Status == "DELIVERING")
+                            {
+                                <div class="small text-success mt-1"><i class="fas fa-ambulance"></i> @item.AssignedDriverName</div>
+                            }
+                            <div class="mt-3 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-light flex-grow-1" onclick="focusOnCase(@item.Id, @item.PatientLat.ToString("G", System.Globalization.CultureInfo.InvariantCulture), @item.PatientLng.ToString("G", System.Globalization.CultureInfo.InvariantCulture))">XEM</button>
+                                <button class="btn btn-sm btn-danger flex-grow-1" onclick="dispatchManual(@item.Id)">ĐIỀU PHỐI</button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="sos-empty text-muted"><i class="fas fa-shield-heart"></i>Chưa có ca khẩn cấp nào</div>
+                }
+            </div>
+        </div>
+
+        <!-- Màn hình 3: Nhật ký sự kiện -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title"><span class="chip tone-amber"><i class="fas fa-history"></i></span> Nhật ký sự kiện</span>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-xs btn-outline-success" onclick="runSeed()" title="Tạo dữ liệu mẫu"><i class="fas fa-database"></i></button>
+                    <button class="btn btn-xs btn-outline-warning" onclick="runClear()" title="Xóa dữ liệu mẫu"><i class="fas fa-eraser"></i></button>
+                </div>
+            </div>
+            <div class="timeline" id="event-log">
+                <div class="mb-2 text-muted">Hệ thống sẵn sàng...</div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ô "Ca đang chờ" tự cập nhật khi hàng chờ thêm/bớt ca (SignalR thêm, nút X xóa, ca hoàn thành tự gỡ)
+    new MutationObserver(() => {
+        document.getElementById('kpi-open').textContent = document.querySelectorAll('#sos-queue .sos-item').length;
+    }).observe(document.getElementById('sos-queue'), { childList: true });
+</script>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder().withUrl("/ambulanceHub").build();
+        let adminMap, driverMarkers = {}, sosMarkers = {};
+
+        function initAdminMap() {
+            adminMap = L.map('admin-map', { zoomControl: false }).setView([10.776, 106.700], 13);
+            // CARTO dark_all nay yêu cầu API key: dùng OpenStreetMap, làm tối bằng CSS (.aw-dark-tiles)
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(adminMap);
+        }
+        
+        connection.on("DriverLocationUpdate", (data) => {
+            addLog(`Tài xế <b>${data.Username}</b> cập nhật vị trí.`);
+            updateDriverMarker(data);
+        });
+
+        connection.on("ReceiveEmergencyCall", (payload) => {
+            // Server gửi PascalCase (CaseId, Loc, Lat, Lng, Patient); addSosToQueue dùng tên camelCase
+            const data = {
+                caseId: payload.CaseId ?? payload.caseId,
+                loc: payload.Loc ?? payload.loc,
+                lat: payload.Lat ?? payload.lat,
+                lng: payload.Lng ?? payload.lng,
+                patient: payload.Patient ?? payload.patient
+            };
+            addSosToQueue(data);
+            toastr.warning(`SOS MỚI: ${data.loc}`, "CẢNH BÁO");
+            new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3').play();
+        });
+
+        connection.on("EscalationAlert", (data) => {
+            const item = document.getElementById(`sos-${data.CaseId}`);
+            if (item) item.classList.add('waiting');
+            toastr.error(data.Message, "CẢNH BÁO LEO THANG", { timeOut: 0 });
+        });
+
+        connection.on("TripStatusUpdated", (data) => {
+            const item = document.getElementById(`sos-${data.CaseId}`);
+            if (item) {
+                const badge = item.querySelector('.badge');
+                if (badge) {
+                    badge.innerText = data.Status;
+                    badge.className = 'badge ' + (data.Status === "OPEN" || data.Status === "PENDING" ? "bg-danger" : "bg-info");
+                }
+                // Nếu hoàn thành thì mờ đi rồi xóa sau 5 giây để Admin kịp nhìn
+                if (data.Status === "COMPLETED" || data.Status === "CANCELLED") {
+                    item.style.opacity = "0.5";
+                    setTimeout(() => item.remove(), 5000);
+                }
+            }
+            addLog(`Chuyến #${data.CaseId}: Trạng thái chuyển thành <span class="badge bg-info">${data.Status}</span>`);
+        });
+
+        connection.on("NotifyCaseAccepted", (data) => {
+            const item = document.getElementById(`sos-${data.CaseId}`);
+            if (item) {
+                const badge = item.querySelector('.badge');
+                if(badge) {
+                    badge.innerText = "ACCEPTED";
+                    badge.className = "badge bg-info";
+                }
+                addLog(`Ca #${data.CaseId} đã được <b>${data.Driver}</b> tiếp nhận.`);
+            }
+        });
+
+        function addSosToQueue(data) {
+            const queue = document.getElementById('sos-queue');
+            // Chỉ xóa dòng "Chưa có ca khẩn cấp nào". Không dò theo .text-muted vì mỗi ca trong
+            // hàng chờ cũng có phần tử .text-muted, sẽ làm SOS mới xóa hết các ca đang chờ.
+            if (!queue.querySelector('.sos-item')) queue.innerHTML = '';
+            
+            const div = document.createElement('div');
+            div.className = 'sos-item';
+            div.id = `sos-${data.caseId}`;
+            div.innerHTML = `
+                <button class="btn btn-link btn-delete-sos" onclick="deleteCase(${data.caseId})" title="Xóa ca này">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="d-flex justify-content-between">
+                    <span class="badge bg-danger">OPEN</span>
+                    <small class="text-muted" style="margin-right: 15px;">Vừa xong</small>
+                </div>
+                <div class="mt-2"><strong>${data.patient}</strong></div>
+                <div class="small text-info"><i class="fas fa-map-marker-alt"></i> ${data.loc}</div>
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-light flex-grow-1" onclick="focusOnCase(${data.caseId}, ${data.lat}, ${data.lng})">XEM</button>
+                    <button class="btn btn-sm btn-danger flex-grow-1" onclick="dispatchManual(${data.caseId})">ĐIỀU PHỐI</button>
+                </div>
+            `;
+            queue.prepend(div);
+        }
+
+        // XÓA THỦ CÔNG: Xử lý khi nhấn dấu X
+        async function deleteCase(id) {
+            if (!confirm("Bạn có chắc chắn muốn xóa ca cấp cứu này khỏi danh sách không?")) return;
+            
+            const res = await fetch(`/Admin/DeleteEmergencyCase/${id}`, { method: 'POST' });
+            if (res.ok) {
+                const item = document.getElementById(`sos-${id}`);
+                if (item) item.remove();
+                toastr.success("Đã xóa ca cấp cứu thành công.");
+            } else {
+                toastr.error("Không thể xóa ca cấp cứu vào lúc này.");
+            }
+        }
+
+        function addLog(msg) {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${new Date().toLocaleTimeString()}</span> <span>${msg}</span>`;
+            log.prepend(entry);
+        }
+
+        async function runSeed() {
+            if(!confirm("Bạn muốn tạo dữ liệu mẫu để test?")) return;
+            const res = await fetch('/Admin/SeedTestData', { method: 'POST' });
+            if(res.ok) {
+                toastr.success(
+                    'Đã tạo dữ liệu! <a href="/Admin/Map" target="_blank" class="btn btn-sm btn-warning ms-2">Xem bản đồ</a>', 
+                    "Thành công", 
+                    { timeOut: 0, closeButton: true, enableHtml: true }
+                );
+            } else {
+                const err = await res.json();
+                toastr.error(err.message || "Lỗi khi tạo dữ liệu.");
+            }
+        }
+
+        async function runClear() {
+            if(!confirm("Xác nhận xóa sạch dữ liệu mẫu (TEST_)?")) return;
+            const res = await fetch('/Admin/ClearTestData', { method: 'POST' });
+            if(res.ok) {
+                toastr.info("Đã dọn dẹp dữ liệu test.");
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        function updateDriverMarker(data) {
+            if (driverMarkers[data.Username]) {
+                driverMarkers[data.Username].setLatLng([data.Lat, data.Lng]);
+            } else {
+                driverMarkers[data.Username] = L.circleMarker([data.Lat, data.Lng], {
+                    color: '#48bb78', fillOpacity: 0.8, radius: 8
+                }).addTo(adminMap).bindTooltip(data.Username);
+            }
+            document.getElementById('active-drivers-count').innerText = `${Object.keys(driverMarkers).length} xe đang chạy`;
+        }
+
+        function focusOnCase(caseId, lat, lng) {
+            adminMap.flyTo([lat, lng], 16);
+            if (sosMarkers[caseId]) {
+                sosMarkers[caseId].openTooltip();
+            } else {
+                sosMarkers[caseId] = L.marker([lat, lng]).addTo(adminMap)
+                    .bindTooltip(`Ca SOS #${caseId}`, { permanent: true }).openTooltip();
+            }
+        }
+
+        async function dispatchManual(caseId) {
+            try {
+                // 1. Lấy danh sách tài xế online kèm khoảng cách
+                const res = await fetch(`/api/Sos/${caseId}/nearby-drivers`);
+                if (!res.ok) throw new Error("Không thể lấy danh sách tài xế.");
+                const drivers = await res.json();
+
+                if (drivers.length === 0) {
+                    toastr.warning("Không có tài xế nào đang ONLINE.");
+                    return;
+                }
+
+                // 2. Chuẩn bị options cho SweetAlert
+                let inputOptions = {};
+                drivers.forEach(d => {
+                    inputOptions[d.username] = `${d.name} [${d.vehicle}] - ${d.distanceStr}`;
+                });
+
+                // 3. Hiển thị Modal chọn tài xế
+                const { value: driverUsername } = await Swal.fire({
+                    title: 'Điều phối thủ công',
+                    text: `Chọn tài xế cho ca #${caseId}`,
+                    input: 'select',
+                    inputOptions: inputOptions,
+                    inputPlaceholder: '--- Chọn tài xế gần nhất ---',
+                    showCancelButton: true,
+                    confirmButtonText: 'GÁN XE NGAY',
+                    cancelButtonText: 'HỦY',
+                    inputValidator: (value) => !value ? 'Bạn phải chọn 1 tài xế!' : null
+                });
+
+                if (driverUsername) {
+                    // 4. Gọi API gán tài xế
+                    const assignRes = await fetch(`/api/Sos/${caseId}/assign-driver`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ DriverUsername: driverUsername })
+                    });
+
+                    if (assignRes.ok) {
+                        toastr.success("Đã gán xe thành công!");
+                        // UI: Cập nhật status hoặc xóa khỏi queue chờ nếu cần
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        const err = await assignRes.json();
+                        toastr.error(err.message || "Lỗi khi gán xe.");
+                    }
+                }
+            } catch (err) {
+                toastr.error(err.message);
+            }
+        }
+
+        initAdminMap();
+        connection.start().then(() => connection.invoke("RegisterAdmin"));
+    </script>
+}

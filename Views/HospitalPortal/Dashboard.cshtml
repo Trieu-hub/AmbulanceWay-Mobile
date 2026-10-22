@@ -1,0 +1,361 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Tiếp nhận bệnh nhân";
+}
+
+<style>
+    .hp-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 22px 24px; border-radius: 18px; color: #fff; margin-bottom: 22px;
+               background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #7f1d1d 100%); box-shadow: var(--aw-shadow); }
+    .hp-hero-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; background: rgba(255,255,255,.1); }
+    .hp-hero h2 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -.01em; }
+    .hp-hero .sub { color: #cbd5e1; font-size: .88rem; margin-top: 2px; }
+    .hp-status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: .8rem; font-weight: 700; }
+    .hp-status .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .hp-status.OPEN { background: rgba(34,197,94,.18); color: #4ade80; }
+    .hp-status.FULL { background: rgba(245,158,11,.18); color: #fbbf24; }
+    .hp-status.CLOSED { background: rgba(148,163,184,.2); color: #cbd5e1; }
+    .hp-stats { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; }
+    .hp-stat { min-width: 120px; padding: 10px 16px; border-radius: 14px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); }
+    .hp-stat b { display: block; font-size: 1.5rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .hp-stat small { color: #cbd5e1; font-size: .75rem; }
+
+    .hp-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .hp-card { background: #fff; border: 1px solid var(--aw-border); border-radius: 18px; box-shadow: var(--aw-shadow); }
+    .hp-card-head { padding: 16px 20px; border-bottom: 1px solid var(--aw-border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hp-card-head h5 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--aw-ink); display: flex; align-items: center; gap: 10px; }
+    .hp-card-head h5 i { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 14px; }
+    .hp-card-body { padding: 18px 20px; }
+
+    .hp-beds { display: flex; align-items: center; gap: 10px; }
+    .hp-beds button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--aw-border); background: #f8fafc; font-size: 1.1rem; font-weight: 700; color: var(--aw-ink); }
+    .hp-beds button:hover { background: #f1f5f9; }
+    .hp-beds input { flex: 1; height: 54px; text-align: center; font-size: 1.6rem !important; font-weight: 800; }
+    .hp-beds-total { color: var(--aw-muted); font-size: .8rem; margin-top: 6px; text-align: center; }
+    .hp-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .hp-seg input { display: none; }
+    .hp-seg label { text-align: center; padding: 10px 6px; border-radius: 11px; border: 1px solid var(--aw-border); cursor: pointer; font-weight: 600; font-size: .85rem; color: var(--aw-muted); transition: .15s; }
+    .hp-seg input:checked + label.OPEN { background: #f0fdf4; border-color: #86efac; color: #15803d; }
+    .hp-seg input:checked + label.FULL { background: #fffbeb; border-color: #fcd34d; color: #b45309; }
+    .hp-seg input:checked + label.CLOSED { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+    .hp-updated { color: var(--aw-muted); font-size: .78rem; margin-top: 10px; text-align: center; }
+
+    .hp-list { padding: 14px; display: grid; gap: 12px; }
+    .hp-case { border: 1px solid var(--aw-border); border-left: 4px solid var(--aw-red); border-radius: 14px; padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; background: #fff; transition: box-shadow .2s; }
+    .hp-case:hover { box-shadow: 0 6px 20px rgba(15,23,42,.08); }
+    .hp-case.is-new { animation: hp-new 1.6s ease 2; }
+    @@keyframes hp-new { 50% { box-shadow: 0 0 0 4px rgba(229,57,53,.25); } }
+    .hp-case-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .hp-case-top b { font-size: 1.02rem; color: var(--aw-ink); }
+    .hp-type { background: var(--aw-red-soft); color: var(--aw-red-dark); font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+    .hp-desc { color: #475569; font-size: .88rem; margin-top: 4px; }
+    .hp-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; color: var(--aw-muted); font-size: .82rem; }
+    .hp-meta i { margin-right: 6px; color: #94a3b8; }
+    .hp-eta { text-align: center; padding: 8px 14px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; min-width: 92px; }
+    .hp-eta b { display: block; font-size: 1.3rem; font-weight: 800; line-height: 1; }
+    .hp-eta small { font-size: .72rem; }
+    .hp-actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; border-top: 1px dashed var(--aw-border); padding-top: 12px; }
+    .hp-empty { text-align: center; padding: 56px 20px; color: var(--aw-muted); }
+    .hp-empty i { font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px; }
+
+    .hp-toast { position: fixed; right: 20px; bottom: 20px; z-index: 1080; display: grid; gap: 10px; }
+    .hp-toast div { background: #0f172a; color: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); font-weight: 600; font-size: .9rem; animation: hp-in .25s ease; display: flex; gap: 10px; align-items: center; }
+    .hp-toast div.error { background: #b91c1c; }
+    @@keyframes hp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    @@media (max-width: 1100px) { .hp-grid { grid-template-columns: 1fr; } .hp-stats { margin-left: 0; } }
+</style>
+
+<div class="hp-hero">
+    <div class="hp-hero-icon"><i class="fas fa-hospital"></i></div>
+    <div>
+        <h2 id="hospitalName">Đang tải...</h2>
+        <div class="sub">Cổng tiếp nhận bệnh nhân cấp cứu · cập nhật theo thời gian thực</div>
+        <div class="mt-2"><span class="hp-status OPEN" id="statusPill"><span class="dot"></span><span id="statusText">—</span></span></div>
+    </div>
+    <div class="hp-stats">
+        <div class="hp-stat"><b id="statBeds">–</b><small>Giường cấp cứu trống</small></div>
+        <div class="hp-stat"><b id="statIncoming">0</b><small>Ca đang đến</small></div>
+        <div class="hp-stat"><b id="statToday">0</b><small>Đã tiếp nhận hôm nay</small></div>
+    </div>
+</div>
+
+<div class="hp-grid">
+    <!-- Năng lực tiếp nhận -->
+    <div class="hp-card">
+        <div class="hp-card-head">
+            <h5><i class="fas fa-bed-pulse" style="background:#ecfdf5;color:#15803d"></i> Năng lực tiếp nhận</h5>
+        </div>
+        <div class="hp-card-body">
+            <label class="form-label">Giường cấp cứu còn trống</label>
+            <div class="hp-beds">
+                <button type="button" onclick="stepBeds(-1)" aria-label="Giảm">−</button>
+                <input type="number" id="availableBeds" class="form-control" value="0" min="0">
+                <button type="button" onclick="stepBeds(1)" aria-label="Tăng">+</button>
+            </div>
+            <div class="hp-beds-total" id="bedsTotal"></div>
+
+            <label class="form-label mt-3">Trạng thái tiếp nhận</label>
+            <div class="hp-seg" id="statusSeg">
+                <input type="radio" name="reception" id="stOpen" value="OPEN"><label for="stOpen" class="OPEN">Đang nhận</label>
+                <input type="radio" name="reception" id="stFull" value="FULL"><label for="stFull" class="FULL">Hết chỗ</label>
+                <input type="radio" name="reception" id="stClosed" value="CLOSED"><label for="stClosed" class="CLOSED">Tạm đóng</label>
+            </div>
+
+            <label class="form-label mt-3" for="statusNote">Ghi chú cho trung tâm điều phối</label>
+            <textarea id="statusNote" class="form-control" rows="2" maxlength="300" placeholder="Ví dụ: Không có bác sĩ tim mạch trực đêm nay"></textarea>
+
+            <button class="btn btn-success w-100 mt-3" id="btnSaveCapacity" onclick="updateCapacity()">
+                <i class="fas fa-floppy-disk"></i> Cập nhật
+            </button>
+            <div class="hp-updated" id="statusUpdated"></div>
+        </div>
+    </div>
+
+    <!-- Ca đang đến -->
+    <div class="hp-card">
+        <div class="hp-card-head">
+            <h5><i class="fas fa-truck-medical" style="background:var(--aw-red-soft);color:var(--aw-red)"></i> Ca cấp cứu đang đến</h5>
+            <span class="badge bg-danger" id="pendingCount">0 ca</span>
+        </div>
+        <div class="hp-list" id="pendingList">
+            <div class="hp-empty"><i class="fas fa-spinner fa-spin"></i>Đang tải dữ liệu...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Hộp thoại tiếp nhận / từ chối -->
+<div class="modal fade" id="respondModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:18px;border:0">
+            <div class="modal-header">
+                <h5 class="modal-title" id="respondTitle">Tiếp nhận bệnh nhân</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" id="respondSummary"></p>
+                <div id="acceptSection">
+                    <label class="form-label" for="assignRoom">Phòng / khu vực đón bệnh nhân</label>
+                    <input type="text" id="assignRoom" class="form-control" maxlength="100" placeholder="Ví dụ: Phòng cấp cứu số 2, Khu A">
+                    <div class="form-text">Tài xế và người nhà sẽ thấy thông tin này ngay lập tức.</div>
+                </div>
+                <div id="rejectSection" style="display:none">
+                    <label class="form-label" for="rejectReason">Lý do từ chối</label>
+                    <select id="rejectReason" class="form-select">
+                        <option value="Hết giường cấp cứu">Hết giường cấp cứu</option>
+                        <option value="Thiếu bác sĩ chuyên khoa">Thiếu bác sĩ chuyên khoa</option>
+                        <option value="Đang bảo trì thiết bị">Đang bảo trì thiết bị</option>
+                        <option value="Lý do khác">Lý do khác</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success" id="btnRespond"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hp-toast" id="hpToast"></div>
+
+@section Scripts {
+    <script>
+        // API và SignalR trả tên trường PascalCase lẫn camelCase: chuẩn hóa về camelCase (đệ quy)
+        const toCamel = v => Array.isArray(v) ? v.map(toCamel)
+            : (v && typeof v === 'object') ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k.charAt(0).toLowerCase() + k.slice(1), toCamel(x)]))
+            : v;
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const statusLabels = { OPEN: 'Đang nhận bệnh nhân', FULL: 'Hết chỗ', CLOSED: 'Tạm đóng' };
+
+        let hospital = null;
+        let pending = [];
+        let knownIds = new Set();
+        let connection = null;
+        let respondTarget = null;
+        let respondStatus = 'ACCEPTED';
+        const respondModal = new bootstrap.Modal(document.getElementById('respondModal'));
+
+        function toast(message, isError = false) {
+            const box = document.createElement('div');
+            if (isError) box.className = 'error';
+            box.innerHTML = `<i class="fas ${isError ? 'fa-triangle-exclamation' : 'fa-bell'}"></i><span>${esc(message)}</span>`;
+            document.getElementById('hpToast').appendChild(box);
+            setTimeout(() => box.remove(), 5000);
+        }
+
+        async function api(url, options = {}) {
+            const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+            if (res.status === 401) { location.href = '/Account/Login'; throw new Error('Phiên đăng nhập đã hết hạn'); }
+            let body = null;
+            try { body = await res.json(); } catch { /* không có nội dung */ }
+            if (!res.ok) throw new Error(body?.message || body?.Message || `Lỗi máy chủ (${res.status})`);
+            return toCamel(body);
+        }
+
+        async function loadDashboard(highlightNew = false) {
+            try {
+                const data = await api('/api/HospitalPortal/dashboard');
+                hospital = data.hospital;
+                pending = data.pendingNotifications || [];
+                renderHospital(data.todayConfirmedCases || 0);
+                renderPending(highlightNew);
+                if (!connection) startSignalR();
+            } catch (err) {
+                document.getElementById('pendingList').innerHTML = `<div class="hp-empty"><i class="fas fa-plug-circle-xmark"></i>${esc(err.message)}</div>`;
+            }
+        }
+
+        function renderHospital(todayCount) {
+            document.getElementById('hospitalName').textContent = hospital.name;
+            const status = hospital.receptionStatus || 'OPEN';
+            const pill = document.getElementById('statusPill');
+            pill.className = `hp-status ${status}`;
+            document.getElementById('statusText').textContent = statusLabels[status] || status;
+            document.getElementById('statBeds').textContent = `${hospital.availableEmergencyBeds}/${hospital.totalEmergencyBeds}`;
+            document.getElementById('statToday').textContent = todayCount;
+
+            // Không ghi đè khi người dùng đang sửa form
+            if (!document.getElementById('btnSaveCapacity').disabled && document.activeElement?.closest('.hp-card-body') == null) {
+                document.getElementById('availableBeds').value = hospital.availableEmergencyBeds;
+                (document.querySelector(`#statusSeg input[value="${status}"]`) || document.getElementById('stOpen')).checked = true;
+                document.getElementById('statusNote').value = hospital.statusNote || '';
+            }
+            document.getElementById('bedsTotal').textContent = `Tổng số giường cấp cứu: ${hospital.totalEmergencyBeds}`;
+            document.getElementById('statusUpdated').textContent = hospital.statusUpdatedAt
+                ? `Cập nhật lần cuối: ${new Date(hospital.statusUpdatedAt.endsWith('Z') ? hospital.statusUpdatedAt : hospital.statusUpdatedAt + 'Z').toLocaleString('vi-VN')}`
+                : '';
+        }
+
+        function renderPending(highlightNew) {
+            document.getElementById('pendingCount').textContent = `${pending.length} ca`;
+            document.getElementById('statIncoming').textContent = pending.length;
+            const list = document.getElementById('pendingList');
+
+            if (pending.length === 0) {
+                list.innerHTML = '<div class="hp-empty"><i class="fas fa-shield-heart"></i>Hiện chưa có ca nào đang đến bệnh viện.</div>';
+                knownIds = new Set();
+                return;
+            }
+
+            list.innerHTML = pending.map(n => {
+                const isNew = highlightNew && !knownIds.has(n.id);
+                const sent = n.createdAt ? new Date(n.createdAt.endsWith('Z') ? n.createdAt : n.createdAt + 'Z').toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+                return `
+                <div class="hp-case ${isNew ? 'is-new' : ''}">
+                    <div>
+                        <div class="hp-case-top"><b>${esc(n.patientName)}</b><span class="hp-type">${esc(n.emergencyType)}</span></div>
+                        ${n.description ? `<div class="hp-desc">${esc(n.description)}</div>` : ''}
+                        <div class="hp-meta">
+                            <span><i class="fas fa-phone"></i>${esc(n.patientPhone)}</span>
+                            <span><i class="fas fa-truck-medical"></i>${esc(n.driverName)} · ${esc(n.vehicleNo)}</span>
+                            <span><i class="fas fa-clock"></i>Báo lúc ${sent}</span>
+                        </div>
+                    </div>
+                    <div class="hp-eta"><b>~${n.etaMinutes}</b><small>phút nữa tới</small></div>
+                    <div class="hp-actions">
+                        <button class="btn btn-sm btn-outline-danger" onclick="openRespond(${n.id}, 'REJECTED')"><i class="fas fa-xmark"></i> Từ chối</button>
+                        <button class="btn btn-sm btn-success" onclick="openRespond(${n.id}, 'ACCEPTED')"><i class="fas fa-check"></i> Tiếp nhận</button>
+                    </div>
+                </div>`;
+            }).join('');
+            knownIds = new Set(pending.map(n => n.id));
+        }
+
+        function stepBeds(delta) {
+            const input = document.getElementById('availableBeds');
+            input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+        }
+
+        async function updateCapacity() {
+            const button = document.getElementById('btnSaveCapacity');
+            button.disabled = true;
+            try {
+                await api('/api/HospitalPortal/capacity', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        AvailableEmergencyBeds: Math.max(0, parseInt(document.getElementById('availableBeds').value) || 0),
+                        ReceptionStatus: document.querySelector('#statusSeg input:checked')?.value || 'OPEN',
+                        StatusNote: document.getElementById('statusNote').value.trim() || null
+                    })
+                });
+                toast('Đã cập nhật năng lực tiếp nhận');
+            } catch (err) {
+                toast(err.message, true);
+            } finally {
+                button.disabled = false;
+                document.activeElement?.blur();
+                loadDashboard();
+            }
+        }
+
+        function openRespond(id, status) {
+            respondTarget = pending.find(n => n.id === id);
+            if (!respondTarget) return;
+            respondStatus = status;
+            const accept = status === 'ACCEPTED';
+            document.getElementById('respondTitle').textContent = accept ? 'Tiếp nhận bệnh nhân' : 'Từ chối ca này';
+            document.getElementById('respondSummary').innerHTML =
+                `<b>${esc(respondTarget.patientName)}</b> · ${esc(respondTarget.emergencyType)}<br><span class="text-muted">Xe ${esc(respondTarget.vehicleNo)} do ${esc(respondTarget.driverName)} lái, dự kiến tới sau ~${respondTarget.etaMinutes} phút.</span>`;
+            document.getElementById('acceptSection').style.display = accept ? '' : 'none';
+            document.getElementById('rejectSection').style.display = accept ? 'none' : '';
+            const btn = document.getElementById('btnRespond');
+            btn.className = `btn ${accept ? 'btn-success' : 'btn-danger'}`;
+            btn.innerHTML = accept ? '<i class="fas fa-check"></i> Xác nhận tiếp nhận' : '<i class="fas fa-xmark"></i> Xác nhận từ chối';
+            document.getElementById('assignRoom').value = '';
+            respondModal.show();
+        }
+
+        document.getElementById('btnRespond').addEventListener('click', async () => {
+            if (!respondTarget) return;
+            const btn = document.getElementById('btnRespond');
+            btn.disabled = true;
+            try {
+                await api(`/api/HospitalPortal/notifications/${respondTarget.id}/respond`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        Status: respondStatus,
+                        Room: document.getElementById('assignRoom').value.trim() || null,
+                        RejectReason: respondStatus === 'REJECTED' ? document.getElementById('rejectReason').value : null,
+                        DriverUsername: respondTarget.driverUsername || ''
+                    })
+                });
+                respondModal.hide();
+                toast(respondStatus === 'ACCEPTED' ? 'Đã xác nhận tiếp nhận, tài xế đã được báo.' : 'Đã từ chối ca, trung tâm sẽ điều xe tới bệnh viện khác.');
+            } catch (err) {
+                toast(err.message, true);
+            } finally {
+                btn.disabled = false;
+                loadDashboard();
+            }
+        });
+
+        function startSignalR() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl('/ambulanceHub')
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on('ReceiveIncomingPatient', raw => {
+                const data = toCamel(raw);
+                if (data.isCancelled) {
+                    toast(`Ca #${data.caseId} đã được bệnh viện khác tiếp nhận.`);
+                } else {
+                    toast(`Có bệnh nhân đang đến: ${data.patientName || 'Bệnh nhân'} (~${data.etaMinutes} phút)`);
+                }
+                loadDashboard(true);
+            });
+
+            // Vào lại nhóm Hospital_{id} sau khi rớt mạng
+            connection.onreconnected(() => connection.invoke('RegisterHospital', hospital.id));
+            connection.start()
+                .then(() => connection.invoke('RegisterHospital', hospital.id))
+                .catch(err => console.error('SignalR:', err));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            // Dự phòng khi lỡ sự kiện realtime
+            setInterval(() => loadDashboard(true), 20000);
+        });
+    </script>
+}

@@ -1,0 +1,228 @@
+
+@{
+    ViewData["Title"] = "Quản lý Tài xế & Tài khoản";
+}
+
+<div class="container mt-4">
+    <h2 class="text-danger fw-bold"><i class="fa-solid fa-users-gear"></i> Tài xế &amp; tài khoản</h2>
+
+    <div class="card shadow-sm p-4 mb-4 border-0" style="background-color: #f8f9fa;">
+        <h5 class="mb-3 text-secondary"><i class="fa-solid fa-user-plus"></i> Đăng ký tài khoản mới</h5>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Tên đăng nhập</label>
+                <input type="text" id="txtUsername" class="form-control" placeholder="Ví dụ: taixe_01" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Mật khẩu</label>
+                <input type="password" id="txtPassword" class="form-control" placeholder="Nhập mật khẩu" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Quyền hạn</label>
+                <select id="txtRole" class="form-select" onchange="toggleDriverFields()">
+                    <option value="DRIVER">Tài xế (DRIVER)</option>
+                    <option value="ADMIN">Quản trị (ADMIN)</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="button" class="btn btn-danger w-100 fw-bold" onclick="saveDriver(event)">
+                    <i class="fa-solid fa-floppy-disk"></i> LƯU TÀI KHOẢN
+                </button>
+            </div>
+        </div>
+
+        <!-- Các trường thông tin tài xế chi tiết (hiển thị khi chọn DRIVER) -->
+        <div class="row g-3 mt-2" id="driverFields">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Họ và tên tài xế</label>
+                <input type="text" id="txtDriverName" class="form-control" placeholder="Nguyễn Văn A">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Số điện thoại</label>
+                <input type="tel" id="txtPhone" class="form-control" placeholder="090...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Biển số xe</label>
+                <input type="text" id="txtVehicle" class="form-control" placeholder="51A-123.45">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Số bằng lái</label>
+                <input type="text" id="txtLicense" class="form-control" placeholder="GPLX...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Trạm trực / Bệnh viện</label>
+                <select id="txtStation" class="form-select">
+                    <option value="Bệnh viện Columbia Asia">Bệnh viện Columbia Asia</option>
+                    <option value="Trạm Bình Thạnh">Trạm Bình Thạnh</option>
+                    <option value="Trạm Quận 1">Trạm Quận 1</option>
+                    <option value="Trạm Thủ Đức">Trạm Thủ Đức</option>
+                    <option value="Trạm Gò Vấp">Trạm Gò Vấp</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-3 text-muted small">
+            * Sau khi tạo, tài xế dùng Username/Password này để đăng nhập vào ca trực cấp cứu.
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 10%;">ID</th>
+                    <th>Tên tài khoản</th>
+                    <th>Quyền hạn</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="driverListBody">
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="spinner-border text-danger" role="status"></div>
+                        <p class="mt-2">Đang tải dữ liệu...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // 1. Hàm load danh sách từ API GetUsers
+    async function loadData() {
+    try {
+        const res = await fetch('/Admin/GetUsers');
+        if (!res.ok) throw new Error("Không thể tải dữ liệu");
+        
+        const data = await res.json();
+        let html = '';
+        
+        data.forEach(d => {
+       
+            const roleBadge = d.role === 'ADMIN' ? 'bg-danger' : 'bg-info text-dark';
+            
+            const dateDisplay = d.createdAt; 
+            
+            html += `
+            <tr>
+                <td>#${d.id}</td>
+                <td><strong class="text-primary">${d.username}</strong></td>
+                <td><span class="badge ${roleBadge}">${d.role}</span></td>
+                <td><span class="badge bg-light text-success border border-success">${d.status}</span></td>
+                <td>${dateDisplay}</td>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <a href="/Admin/Edit/${d.id}" class="btn btn-sm btn-outline-warning">
+                            <i class="fa-solid fa-pen"></i> Sửa
+                        </a>
+                        <button onclick="deleteUser(${d.id})" class="btn btn-sm btn-outline-danger">
+                            <i class="fa-solid fa-trash"></i> Xóa
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        
+        document.getElementById('driverListBody').innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        document.getElementById('driverListBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Lỗi khi tải dữ liệu!</td></tr>';
+    }
+}
+
+    function toggleDriverFields() {
+        const role = document.getElementById('txtRole').value;
+        const driverFields = document.getElementById('driverFields');
+        if (role === 'DRIVER') {
+            driverFields.style.display = 'flex';
+        } else {
+            driverFields.style.display = 'none';
+        }
+    }
+
+    // 2. Hàm lưu tài khoản mới
+    async function saveDriver(e) {
+        if (e) e.preventDefault();
+        const user = document.getElementById('txtUsername').value.trim();
+        const pass = document.getElementById('txtPassword').value.trim();
+        const role = document.getElementById('txtRole').value;
+
+        if (!user || !pass) {
+            alert("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!");
+            return;
+        }
+
+        const payload = {
+            Username: user,
+            Password: pass,
+            Role: role
+        };
+
+        if (role === 'DRIVER') {
+            payload.DriverName = document.getElementById('txtDriverName').value.trim();
+            payload.Phone = document.getElementById('txtPhone').value.trim();
+            payload.Vehicle = document.getElementById('txtVehicle').value.trim();
+            payload.LicenseNo = document.getElementById('txtLicense').value.trim();
+            payload.Station = document.getElementById('txtStation').value;
+        }
+
+        try {
+            const res = await fetch('/Admin/AddUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Chúc mừng! Đã tạo tài khoản thành công.");
+                // Reset form
+                document.getElementById('txtUsername').value = '';
+                document.getElementById('txtPassword').value = '';
+                if (role === 'DRIVER') {
+                    document.getElementById('txtDriverName').value = '';
+                    document.getElementById('txtPhone').value = '';
+                    document.getElementById('txtVehicle').value = '';
+                    document.getElementById('txtLicense').value = '';
+                }
+                // Reload bảng
+                loadData();
+            } else {
+                const errText = await res.text();
+                alert("Lỗi: " + errText);
+            }
+        } catch (err) {
+            alert("Lỗi kết nối server!");
+        }
+    }
+
+    // 3. Hàm xóa tài khoản
+    async function deleteUser(id) {
+        if (!confirm("Bạn có chắc chắn muốn xóa?")) return;
+
+        try {
+            const res = await fetch(`/Admin/Delete/${id}`, { 
+                method: 'POST' 
+            });
+            
+            if (res.ok) {
+                loadData(); // Load lại bảng ngay lập tức
+            } else {
+                const errorText = await res.text();
+                alert("Lỗi: " + errorText);
+            }
+        } catch (err) {
+            alert("Lỗi kết nối!");
+        }
+    }
+
+    // Tự động chạy khi load trang
+    document.addEventListener("DOMContentLoaded", () => {
+        toggleDriverFields();
+        loadData();
+    });
+</script>
+}

@@ -1,26 +1,32 @@
 ﻿var map;
-var routingControl = null;
-var startPoint = null;
-var endPoint = null;
-var markerA = null;
-var markerB = null;
-var userMarker = null;
+let routingControl = null;
+let startPoint = null;
+let endPoint = null;
+let markerA = null;
+let markerB = null;
+let userMarker = null;
+let isDark = false;
+
+var lightLayer, darkLayer;
+
+if (typeof L !== 'undefined') {
+    lightLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+}
 
 function initAmbulanceMap() {
-    var container = L.DomUtil.get('map');
-    if (container != null) { container._leaflet_id = null; }
+    const container = L.DomUtil.get('map');
+    if (container && container._leaflet_id !== undefined) {
+        if (map) { map.remove(); }
+        container._leaflet_id = null;
+    }
 
     map = L.map('map').setView([10.762622, 106.660172], 15);
 
-    var lightLayer = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-);
-
-var darkLayer = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-);
-
-lightLayer.addTo(map);
+    // Thiết lập layer ban đầu dựa trên class của body
+    isDark = document.body.classList.contains("dark");
+    const currentLayer = isDark ? darkLayer : lightLayer;
+    currentLayer.addTo(map);
 
     map.on("click", function (e) {
         if (!startPoint) {
@@ -39,7 +45,9 @@ lightLayer.addTo(map);
                 .bindPopup("🏥 Điểm B")
                 .openPopup();
 
-            drawRoute(startPoint, endPoint);
+            if (typeof drawRoute === "function") {
+                drawRoute(startPoint, endPoint);
+            }
         }
         else {
             resetMap();
@@ -49,19 +57,15 @@ lightLayer.addTo(map);
     coreLocateUser();
 }
 
-var isDark = false;
-
 function coreToggleTheme() {
-    document.body.classList.toggle("dark");
+    isDark = document.body.classList.toggle("dark");
 
-    if (!isDark) {
+    if (isDark) {
         map.removeLayer(lightLayer);
         darkLayer.addTo(map);
-        isDark = true;
     } else {
         map.removeLayer(darkLayer);
         lightLayer.addTo(map);
-        isDark = false;
     }
 }
 
@@ -99,23 +103,47 @@ function coreLocateUser() {
     });
 }
 
-function coreToggleTheme() {
-    document.body.classList.toggle("dark");
-}
-
 function toggleRoutePanel() {
-    var panel = document.querySelector(".leaflet-routing-container");
+    const panel = document.querySelector(".leaflet-routing-container");
 
     if (!panel) return;
 
-    var isHidden = panel.style.display === "none";
+    const isHidden = panel.style.display === "none";
 
     panel.style.display = isHidden ? "block" : "none";
 
-    var btn = document.getElementById("toggleRoute");
+    const btn = document.getElementById("toggleRoute");
     if (btn) {
         btn.innerText = isHidden
             ? "✕ Hiện chỉ đường"
             : "✕ Ẩn chỉ đường";
     }
+}
+
+// Global toast util (for admin pages)
+function showToast(message, type = 'info') {
+    // Fallback if no toast container
+    if (typeof bootstrap === 'undefined') {
+        alert(message);
+        return;
+    }
+    
+    const toastId = type === 'success' ? 'successToast' : type === 'error' ? 'errorToast' : 'infoToast';
+    const toastEl = document.getElementById(toastId);
+    if (!toastEl) {
+        console.warn('No toast element:', toastId);
+        alert(message);
+        return;
+    }
+    
+    const toastBody = toastEl.querySelector('.toast-body');
+    toastBody.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>${message}`;
+    
+    const bsToast = new bootstrap.Toast(toastEl);
+    bsToast.show();
+}
+
+// Network status toast
+function showNetworkStatus(status) {
+    showToast(`Kết nối: ${status === 'online' ? 'Trực tuyến' : 'Ngoại tuyến'}`, status === 'online' ? 'success' : 'warning');
 }

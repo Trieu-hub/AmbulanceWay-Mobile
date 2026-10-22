@@ -1,0 +1,401 @@
+@{
+    ViewData["Title"] = "Quản lý Bệnh viện";
+}
+
+<div class="container mt-4">
+
+    <h2 class="text-danger fw-bold">
+        <i class="fa-solid fa-hospital"></i> Quản lý Bệnh viện
+    </h2>
+
+    <!-- Toast notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-check-circle me-2"></i>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-exclamation-circle me-2"></i>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="infoToast" class="toast align-items-center text-bg-info border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-info-circle me-2"></i>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Form thêm/sửa bệnh viện -->
+    <div class="card shadow-sm p-4 mb-4 border-0" style="background-color: #f8f9fa;">
+        <h5 class="mb-3 text-secondary">
+            <i class="fa-solid fa-plus-circle"></i> Thêm/Sửa Bệnh viện
+        </h5>
+        <form id="hospitalForm">
+            <input type="hidden" id="hospitalId" value="0">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Tên bệnh viện</label>
+                    <input type="text" id="hospitalName" class="form-control" placeholder="Ví dụ: Bệnh viện Nhi Đồng 1" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Địa chỉ</label>
+                    <input type="text" id="hospitalAddress" class="form-control" placeholder="Địa chỉ đầy đủ">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Vĩ độ (Lat)</label>
+                    <input type="number" step="0.0000001" id="hospitalLat" class="form-control" placeholder="10.776xxx">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Kinh độ (Lng)</label>
+                    <input type="number" step="0.0000001" id="hospitalLng" class="form-control" placeholder="106.700xxx">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Số điện thoại</label>
+                    <input type="text" id="hospitalPhone" class="form-control" placeholder="028 3829 1234">
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Loại bệnh viện</label>
+                    <select id="hospitalType" class="form-select">
+                        <option value="">-- Chọn loại --</option>
+                        <option value="Tuyến 1">Tuyến 1</option>
+                        <option value="Tuyến 2">Tuyến 2</option>
+                        <option value="Tuyến 3">Tuyến 3</option>
+                        <option value="Chuyên khoa">Chuyên khoa</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">
+                        <i class="fa-solid fa-save"></i> LƯU BỆNH VIỆN
+                    </button>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-secondary w-100" onclick="resetForm()">
+                        <i class="fa-solid fa-times"></i> HỦY
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Danh sách bệnh viện -->
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Tên bệnh viện</th>
+                    <th>Địa chỉ</th>
+                    <th>Tọa độ</th>
+                    <th>Điện thoại</th>
+                    <th>Loại</th>
+                    <th class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="hospitalListBody">
+
+                <tr id="loadingRow">
+                    <td colspan="7" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-danger" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                        <p class="mt-2 text-muted small">Đang tải danh sách bệnh viện...</p>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<!-- Tài khoản cổng bệnh viện -->
+<div class="modal fade" id="accountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:18px;border:0">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-key text-primary"></i> Tài khoản cổng bệnh viện</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2"><b id="accHospitalName"></b></p>
+                <div class="small text-muted mb-1">Tài khoản hiện có</div>
+                <ul class="list-group mb-3" id="accList"></ul>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label" for="accUsername">Tên đăng nhập</label><input id="accUsername" class="form-control" maxlength="50" placeholder="bv_tenbenhvien"></div>
+                    <div class="col-6"><label class="form-label" for="accPassword">Mật khẩu</label><input id="accPassword" type="password" class="form-control" placeholder="Ít nhất 6 ký tự"></div>
+                    <div class="col-12"><label class="form-label" for="accFullName">Tên hiển thị (không bắt buộc)</label><input id="accFullName" class="form-control" maxlength="100" placeholder="Khoa Cấp cứu ..."></div>
+                </div>
+                <div class="form-text">Nhập tên đăng nhập đã có để đặt lại mật khẩu cho tài khoản đó.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="saveAccount()"><i class="fa-solid fa-floppy-disk"></i> Lưu tài khoản</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ----- Tài khoản cổng bệnh viện -----
+    let accHospitalId = null;
+
+    async function openAccounts(id) {
+        accHospitalId = id;
+        const row = [...document.querySelectorAll('#hospitalListBody tr')].find(tr => tr.firstElementChild?.textContent === '#' + id);
+        document.getElementById('accHospitalName').textContent = row ? row.children[1].textContent : ('Bệnh viện #' + id);
+        ['accUsername', 'accPassword', 'accFullName'].forEach(x => document.getElementById(x).value = '');
+        await loadAccounts();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('accountModal')).show();
+    }
+
+    async function loadAccounts() {
+        const list = document.getElementById('accList');
+        list.innerHTML = '<li class="list-group-item text-muted">Đang tải...</li>';
+        try {
+            const res = await fetch('/Admin/HospitalAccounts?hospitalId=' + accHospitalId);
+            const data = await res.json();
+            list.innerHTML = data.length === 0
+                ? '<li class="list-group-item text-muted">Chưa có tài khoản nào</li>'
+                : data.map(a => '<li class="list-group-item d-flex justify-content-between"><span><i class="fa-solid fa-hospital-user text-primary me-2"></i><b>'
+                    + a.username + '</b></span><small class="text-muted">' + a.fullName + '</small></li>').join('');
+        } catch {
+            list.innerHTML = '<li class="list-group-item text-danger">Không tải được danh sách tài khoản</li>';
+        }
+    }
+
+    async function saveAccount() {
+        const res = await fetch('/Admin/SaveHospitalAccount', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                HospitalId: accHospitalId,
+                Username: document.getElementById('accUsername').value.trim(),
+                Password: document.getElementById('accPassword').value,
+                FullName: document.getElementById('accFullName').value.trim() || null
+            })
+        });
+        let result = {};
+        try { result = await res.json(); } catch { }
+        if (res.ok && result.success) {
+            showToast(result.message, 'success');
+            document.getElementById('accPassword').value = '';
+            loadAccounts();
+        } else {
+            showToast(result.message || 'Không lưu được tài khoản', 'error');
+        }
+    }
+</script>
+
+<script>
+    // API trả tên trường PascalCase (Id, Name...) còn mã bên dưới đọc camelCase (id, name...)
+    const toCamel = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), v]));
+    // Dòng 'đang tải' nằm trong tbody nên bị xóa khi vẽ bảng: bỏ qua nếu không còn
+    const setLoadingRow = display => { const row = document.getElementById('loadingRow'); if (row) row.style.display = display; };
+    // 1. Load danh sách bệnh viện
+
+    async function loadHospitals() {
+        setLoadingRow('table-row');
+        try {
+            const res = await fetch('/api/Hospitals');
+
+            if (!res.ok) throw new Error("Không thể tải dữ liệu");
+            
+            const data = (await res.json()).map(toCamel);
+            let html = '';
+            
+            if (data.length === 0) {
+                html = '<tr><td colspan="7" class="text-center text-muted">Chưa có bệnh viện nào</td></tr>';
+            } else {
+                data.forEach(h => {
+                    html += `
+                    <tr>
+                        <td>#${h.id}</td>
+                        <td><strong class="text-primary">${h.name}</strong></td>
+                        <td>${h.address || '-'}</td>
+                        <td><small>${h.lat}, ${h.lng}</small></td>
+                        <td>${h.phone || '-'}</td>
+                        <td><span class="badge bg-info">${h.type || '-'}</span></td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <button onclick="editHospital(${h.id}, '${h.name}', '${h.address}', ${h.lat}, ${h.lng}, '${h.phone}', '${h.type}')" class="btn btn-sm btn-outline-warning">
+                                    <i class="fa-solid fa-pen"></i> Sửa
+                                </button>
+                                <button onclick="openAccounts(${h.id})" class="btn btn-sm btn-outline-primary" title="Tài khoản đăng nhập cổng bệnh viện">
+                                    <i class="fa-solid fa-key"></i> Tài khoản
+                                </button>
+                                <button onclick="deleteHospital(${h.id})" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-trash"></i> Xóa
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+            }
+            
+
+            document.getElementById('hospitalListBody').innerHTML = html;
+            setLoadingRow('none');
+        } catch (err) {
+            console.error('Load hospitals error:', err);
+            document.getElementById('hospitalListBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4"><i class="fa-solid fa-exclamation-triangle fa-2x mb-2 d-block"></i><p class="mb-0">Không thể tải dữ liệu!<br><small class="text-muted">Kiểm tra kết nối hoặc thử lại</small></p></td></tr>';
+            setLoadingRow('none');
+            showToast('Không thể tải danh sách bệnh viện. Vui lòng thử lại!', 'error');
+        }
+    }
+
+
+    // 2. Submit form (Thêm hoặc Cập nhật)
+
+    document.getElementById('hospitalForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Validation lat/lng Việt Nam
+        const lat = parseFloat(document.getElementById('hospitalLat').value);
+        const lng = parseFloat(document.getElementById('hospitalLng').value);
+        if (isNaN(lat) || lat < 8 || lat > 23.5) {
+            showToast('Vĩ độ không hợp lệ (8-23.5°)', 'error');
+            return;
+        }
+        if (isNaN(lng) || lng < 102 || lng > 110) {
+            showToast('Kinh độ không hợp lệ (102-110°)', 'error');
+            return;
+        }
+
+        // Show loading on submit button
+        const submitBtn = e.target.querySelector('button[type=\"submit\"]');
+        const originalText = submitBtn.innerHTML;
+
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang lưu...';
+        submitBtn.disabled = true;
+
+        const id = parseInt(document.getElementById('hospitalId').value);
+        const hospital = {
+            name: document.getElementById('hospitalName').value.trim(),
+            address: document.getElementById('hospitalAddress').value.trim(),
+            lat: lat,
+            lng: lng,
+            phone: document.getElementById('hospitalPhone').value.trim(),
+            type: document.getElementById('hospitalType').value,
+            isActive: true
+        };
+
+        try {
+            let res;
+            if (id === 0) {
+                res = await fetch('/api/Hospitals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(hospital)
+                });
+            } else {
+                res = await fetch(`/api/Hospitals/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(hospital)
+                });
+            }
+
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+
+            if (res.ok) {
+                const result = await res.json();
+                showToast(result.message || (id === 0 ? 'Thêm bệnh viện thành công!' : 'Cập nhật thành công!'), 'success');
+                resetForm();
+                loadHospitals();
+            } else {
+                const err = await res.text();
+                showToast('Lỗi server: ' + err, 'error');
+            }
+        } catch (err) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            showToast('Lỗi kết nối! Vui lòng kiểm tra mạng.', 'error');
+            console.error('Submit error:', err);
+        }
+    });
+
+
+    // 3. Edit - Điền form
+    window.editHospital = function(id, name, address, lat, lng, phone, type) {
+        document.getElementById('hospitalId').value = id;
+        document.getElementById('hospitalName').value = name;
+        document.getElementById('hospitalAddress').value = address;
+        document.getElementById('hospitalLat').value = lat;
+        document.getElementById('hospitalLng').value = lng;
+        document.getElementById('hospitalPhone').value = phone;
+        document.getElementById('hospitalType').value = type || '';
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // 4. Delete - Xóa bệnh viện
+
+    async function deleteHospital(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa bệnh viện này?\n\nThao tác này không thể hoàn tác!')) return;
+
+        try {
+            const res = await fetch(`/api/Hospitals/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                showToast(result.message || 'Xóa bệnh viện thành công!', 'success');
+                loadHospitals();
+            } else {
+                const err = await res.text();
+                showToast('Lỗi xóa: ' + err, 'error');
+            }
+        } catch (err) {
+            showToast('Lỗi kết nối khi xóa!', 'error');
+            console.error('Delete error:', err);
+        }
+    }
+
+
+    // 5. Reset form
+    window.resetForm = function() {
+        document.getElementById('hospitalForm').reset();
+        document.getElementById('hospitalId').value = '0';
+    };
+
+
+    // Toast util function
+    function showToast(message, type = 'info') {
+        const toastId = type === 'success' ? 'successToast' : type === 'error' ? 'errorToast' : 'infoToast';
+        const toastEl = document.getElementById(toastId);
+        const toastBody = toastEl.querySelector('.toast-body');
+        toastBody.innerHTML = message;
+        const bsToast = new bootstrap.Toast(toastEl);
+        bsToast.show();
+    }
+
+    // Auto hide loading row if not loaded
+    setTimeout(() => {
+        const loadingRow = document.getElementById('loadingRow');
+        if (loadingRow && loadingRow.style.display !== 'none') {
+            loadingRow.style.display = 'none';
+        }
+    }, 10000);
+
+    // Tự động load khi trang load xong
+    document.addEventListener('DOMContentLoaded', loadHospitals);
+</script>
+}
+

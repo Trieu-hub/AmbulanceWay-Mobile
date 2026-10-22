@@ -1,0 +1,235 @@
+/* ==========================================================================
+   AmbulanceWay - giao diện trang quản trị (dùng cho _Layout.cshtml)
+   Nạp sau bootstrap và site.css nên ghi đè được kiểu mặc định của các trang cũ.
+   ========================================================================== */
+
+:root {
+    --aw-red: #e53935;
+    --aw-red-dark: #b71c1c;
+    --aw-red-soft: #fdecec;
+    --aw-ink: #0f172a;
+    --aw-text: #1e293b;
+    --aw-muted: #64748b;
+    --aw-border: #e2e8f0;
+    --aw-bg: #f1f5f9;
+    --aw-surface: #ffffff;
+    --aw-sidebar: #0b1220;
+    --aw-sidebar-2: #111a2e;
+    --aw-green: #16a34a;
+    --aw-blue: #0ea5e9;
+    --aw-amber: #f59e0b;
+    --aw-radius: 16px;
+    --aw-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+    --aw-topbar-h: 64px;
+    --aw-sidebar-w: 264px;
+}
+
+html { font-size: 15px; }
+
+body.aw-body {
+    margin: 0;
+    background: var(--aw-bg);
+    color: var(--aw-text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Khung: thanh bên + nội dung ---------- */
+
+.aw-shell { display: flex; min-height: 100vh; }
+
+.aw-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--aw-sidebar-w);
+    background: linear-gradient(180deg, var(--aw-sidebar) 0%, var(--aw-sidebar-2) 100%);
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    z-index: 1040;
+    transition: transform .25s ease;
+}
+
+.aw-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 22px;
+    text-decoration: none;
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.aw-brand:hover { color: #fff; }
+.aw-brand-mark {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #ff5a52, var(--aw-red-dark));
+    box-shadow: 0 6px 18px rgba(229, 57, 53, .45);
+    font-size: 19px; color: #fff;
+}
+.aw-brand b { display: block; font-size: 1.05rem; letter-spacing: .2px; }
+.aw-brand small { display: block; color: #94a3b8; font-size: .75rem; margin-top: 1px; }
+
+.aw-nav { padding: 14px 12px; flex: 1; overflow-y: auto; }
+.aw-nav-label {
+    font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #64748b; padding: 14px 12px 6px;
+}
+.aw-nav-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; margin-bottom: 2px;
+    border-radius: 10px;
+    color: #cbd5e1; text-decoration: none; font-weight: 500;
+    transition: background .15s, color .15s;
+}
+.aw-nav-link i { width: 20px; text-align: center; color: #64748b; transition: color .15s; }
+.aw-nav-link:hover { background: rgba(255, 255, 255, .05); color: #fff; }
+.aw-nav-link:hover i { color: #e2e8f0; }
+.aw-nav-link.active {
+    background: linear-gradient(90deg, rgba(229, 57, 53, .22), rgba(229, 57, 53, .05));
+    color: #fff;
+    box-shadow: inset 3px 0 0 var(--aw-red);
+}
+.aw-nav-link.active i { color: #ff6b63; }
+.aw-nav-link .aw-ext { margin-left: auto; font-size: .7rem; opacity: .6; }
+
+.aw-sidebar-foot {
+    padding: 14px 16px;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+    display: flex; align-items: center; gap: 10px;
+}
+.aw-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #1e293b; color: #fff; font-weight: 700; text-transform: uppercase;
+    border: 2px solid rgba(255, 255, 255, .1);
+}
+.aw-user { flex: 1; min-width: 0; line-height: 1.2; }
+.aw-user b { display: block; color: #fff; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw-user small { color: #94a3b8; font-size: .75rem; }
+.aw-logout {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center;
+    color: #94a3b8; text-decoration: none; transition: .15s;
+}
+.aw-logout:hover { background: rgba(229, 57, 53, .18); color: #ff8a84; }
+
+.aw-main { flex: 1; margin-left: var(--aw-sidebar-w); min-width: 0; display: flex; flex-direction: column; }
+
+.aw-topbar {
+    position: sticky; top: 0; z-index: 1030;
+    height: var(--aw-topbar-h);
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 24px;
+    background: rgba(255, 255, 255, .85);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--aw-border);
+}
+.aw-menu-btn {
+    display: none;
+    border: 0; background: transparent; font-size: 1.2rem; color: var(--aw-ink);
+    width: 38px; height: 38px; border-radius: 10px;
+}
+.aw-menu-btn:hover { background: var(--aw-bg); }
+.aw-page-title { font-weight: 700; font-size: 1.1rem; color: var(--aw-ink); }
+.aw-crumb { color: var(--aw-muted); font-size: .8rem; font-weight: 500; }
+.aw-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.aw-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px;
+    background: #ecfdf5; color: #047857; font-size: .8rem; font-weight: 600;
+}
+.aw-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, .6); animation: aw-ping 2s infinite; }
+.aw-pill.offline { background: #fef2f2; color: #b91c1c; }
+.aw-pill.offline .dot { background: #ef4444; animation: none; }
+.aw-clock { font-variant-numeric: tabular-nums; color: var(--aw-muted); font-weight: 600; font-size: .9rem; }
+
+@keyframes aw-ping {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, .55); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.aw-content { padding: 28px; flex: 1; animation: aw-fade-in .35s ease; }
+.aw-content.aw-flush { padding: 0; }
+@keyframes aw-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.aw-backdrop { display: none; }
+
+@media (max-width: 991.98px) {
+    .aw-sidebar { transform: translateX(-100%); }
+    body.aw-nav-open .aw-sidebar { transform: none; box-shadow: 0 0 40px rgba(0, 0, 0, .35); }
+    body.aw-nav-open .aw-backdrop { display: block; position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 1035; }
+    .aw-main { margin-left: 0; }
+    .aw-menu-btn { display: grid; place-items: center; }
+    .aw-content { padding: 16px; }
+    .aw-clock { display: none; }
+}
+
+/* ---------- Thành phần dùng chung (nâng cấp kiểu bootstrap của các trang cũ) ---------- */
+
+.aw-content h1, .aw-content h2, .aw-content h3 { letter-spacing: -.01em; }
+.aw-content h2.text-danger, .aw-content h3.text-danger { color: var(--aw-ink) !important; font-weight: 800; }
+.aw-content h2.text-danger i, .aw-content h3.text-danger i { color: var(--aw-red); }
+
+.aw-content .card {
+    border: 1px solid var(--aw-border);
+    border-radius: var(--aw-radius);
+    box-shadow: var(--aw-shadow);
+    overflow: hidden;
+}
+.aw-content .card-header { border-bottom: 1px solid var(--aw-border); font-weight: 600; padding: 14px 18px; }
+.aw-content .card-header.bg-danger,
+.aw-content .card-header.bg-primary,
+.aw-content .card-header.bg-success,
+.aw-content .card-header.bg-dark { background: var(--aw-surface) !important; color: var(--aw-ink) !important; }
+.aw-content .card-header.bg-danger i { color: var(--aw-red); }
+.aw-content .card-header.bg-primary i { color: var(--aw-blue); }
+.aw-content .card-header.bg-success i { color: var(--aw-green); }
+
+.aw-content .table { margin-bottom: 0; vertical-align: middle; }
+.aw-content .table > thead > tr > th,
+.aw-content .table-dark > tr > th,
+.aw-content thead.table-dark th {
+    background: #f8fafc !important;
+    color: var(--aw-muted) !important;
+    font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--aw-border) !important;
+    padding-top: 12px; padding-bottom: 12px;
+}
+.aw-content .table > tbody > tr > td { border-color: #f1f5f9; padding-top: 12px; padding-bottom: 12px; }
+.aw-content .table-hover > tbody > tr:hover > * { background: #f8fafc; }
+
+.aw-content .form-control, .aw-content .form-select {
+    border-radius: 10px; border-color: var(--aw-border); padding: .55rem .85rem;
+}
+.aw-content .form-control:focus, .aw-content .form-select:focus {
+    border-color: #fca5a5; box-shadow: 0 0 0 4px rgba(229, 57, 53, .12);
+}
+.aw-content .form-label { font-weight: 600; font-size: .85rem; color: var(--aw-text); }
+
+.aw-content .btn { border-radius: 10px; font-weight: 600; }
+.aw-content .btn:hover { transform: none; }
+.aw-content .btn-danger { background: var(--aw-red); border-color: var(--aw-red); box-shadow: 0 4px 14px rgba(229, 57, 53, .25); }
+.aw-content .btn-danger:hover { background: var(--aw-red-dark); border-color: var(--aw-red-dark); }
+.aw-content .btn-success { box-shadow: 0 4px 14px rgba(22, 163, 74, .2); }
+.aw-content .badge { font-weight: 600; letter-spacing: .02em; border-radius: 6px; padding: .4em .6em; }
+
+/* footer cũ của site.css không còn dùng */
+body.aw-body { margin-bottom: 0; }
+.aw-footer { padding: 18px 28px; color: var(--aw-muted); font-size: .8rem; border-top: 1px solid var(--aw-border); }
+
+/* Bản đồ OpenStreetMap phiên bản tối (thay cho CARTO dark_all nay đã yêu cầu API key) */
+.aw-dark-tiles .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6); }
+.aw-dark-tiles { background: #0b1220 !important; }
+
+/* .btn-group trong site.css (dành cho popup nhận ca cũ) đẩy nút thao tác trong bảng xuống dưới */
+.aw-content td .btn-group { margin-top: 0; display: inline-flex; gap: 6px; justify-content: center; }
+.aw-content td .btn-group > .btn { border-radius: 8px !important; }
+
+.aw-pill { white-space: nowrap; }
+@media (max-width: 991.98px) {
+    .aw-crumb { display: none; }
+    .aw-topbar { padding: 0 14px; }
+}

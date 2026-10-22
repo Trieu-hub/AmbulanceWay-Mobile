@@ -1,0 +1,15 @@
+@model AmbulanceWay.Models.User
+
+<h2>Thông tin tài khoản</h2>
+
+<p>Tên đăng nhập: @Model.Username</p>
+<p>Quyền: @Model.Role</p>
+<p>Trạng thái: @Model.Status</p>
+<p>Ngày tạo: @Model.CreatedAt.ToString("dd/MM/yyyy")</p>
+
+@if (Context.Session.GetInt32("ROLE") == 1)
+{
+    @* Sửa đường dẫn cho đúng Controller Admin *@
+    <a href="/Admin/Edit/@Model.Id" class="btn btn-warning">✏️ Chỉnh sửa</a>
+}
+<a href="/Admin/Index" class="btn btn-secondary">Quay lại</a>

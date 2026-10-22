@@ -1,0 +1,43 @@
+{
+  "name": "AmbulanceWay Driver",
+  "short_name": "AmbulanceWay",
+  "id": "ambulanceway-pwa-v1",
+  "description": "Hệ thống hỗ trợ điều phối xe cấp cứu",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#c0392b",
+  "theme_color": "#e74c3c",
+  "icons": [
+    {
+      "src": "/images/android-chrome-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quản lý Bệnh viện",
+      "url": "/Admin/Hospitals",
+      "icons": [{ "src": "/images/hospital-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Lịch sử chuyến đi",
+      "url": "/Admin/TripHistory",
+      "icons": [{ "src": "/images/history-icon.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,804 @@
+@{
+    ViewData["Title"] = "Gọi xe cấp cứu";
+    Layout = "_PublicLayout";
+}
+
+<style>
+    .ps-top {
+        position: sticky; top: 0; z-index: 900; display: flex; align-items: center; gap: 12px; padding: 12px 24px;
+        background: rgba(255, 255, 255, .9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--aw-border);
+    }
+    .ps-top .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--aw-ink); text-decoration: none; }
+    .ps-top .brand .aw-brand-mark { width: 34px; height: 34px; border-radius: 11px; }
+    .ps-top .who { margin-left: auto; text-align: right; line-height: 1.2; }
+    .ps-top .who b { display: block; color: var(--aw-ink); font-size: .92rem; }
+    .ps-top .who small { color: var(--aw-muted); font-size: .78rem; }
+    .ps-avatar { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--aw-red-soft); color: var(--aw-red-dark); font-weight: 800; flex: none; }
+    .ps-out { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--aw-muted); border: 1px solid var(--aw-border); text-decoration: none; }
+    .ps-out:hover { color: var(--aw-red); border-color: var(--aw-red); }
+
+    .ps-main { max-width: 1240px; margin: 0 auto; padding: 24px; }
+    .ps-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 22px; align-items: start; }
+    .ps-card { background: #fff; border: 1px solid var(--aw-border); border-radius: 22px; box-shadow: var(--aw-shadow); padding: 22px; margin-bottom: 22px; }
+    .ps-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--aw-ink); margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+    .ps-card h3 .n { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--aw-red); color: #fff; font-size: .8rem; }
+    .ps-card .hint { color: var(--aw-muted); font-size: .88rem; margin: 0 0 16px; }
+
+    /* Chọn tình trạng */
+    .ps-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .ps-type { position: relative; cursor: pointer; }
+    .ps-type input { position: absolute; opacity: 0; pointer-events: none; }
+    .ps-type span {
+        display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; border: 1.5px solid var(--aw-border);
+        font-weight: 600; font-size: .88rem; color: var(--aw-text); transition: .15s; height: 100%;
+    }
+    .ps-type i { width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center; background: var(--aw-bg); color: var(--aw-muted); transition: .15s; }
+    .ps-type input:checked + span { border-color: var(--aw-red); background: #fff7f7; color: var(--aw-ink); box-shadow: 0 0 0 4px rgba(229, 57, 53, .08); }
+    .ps-type input:checked + span i { background: var(--aw-red); color: #fff; }
+    .ps-type input:focus-visible + span { outline: 2px solid var(--aw-red); outline-offset: 2px; }
+
+    /* Vị trí */
+    .ps-pick { position: relative; height: 300px; border-radius: 16px; overflow: hidden; border: 1px solid var(--aw-border); margin-bottom: 12px; }
+    #pickMap { position: absolute; inset: 0; }
+    .ps-pick-msg {
+        position: absolute; left: 12px; right: 12px; top: 12px; z-index: 500; padding: 9px 12px; border-radius: 12px; font-size: .84rem; font-weight: 600;
+        background: rgba(15, 23, 42, .85); color: #fff; display: flex; gap: 8px; align-items: center;
+    }
+    .ps-pick-msg.is-ok { background: rgba(22, 163, 74, .92); }
+    .ps-pick-btn {
+        position: absolute; right: 12px; bottom: 12px; z-index: 500; border: 0; border-radius: 12px; padding: 9px 12px; background: #fff;
+        font: 600 .84rem 'Inter', sans-serif; color: var(--aw-ink); box-shadow: var(--aw-shadow); cursor: pointer;
+    }
+    .ps-pick-btn:hover { color: var(--aw-red); }
+
+    /* Nút SOS */
+    .ps-aside { position: sticky; top: 84px; }
+    .ps-aside .ps-send { margin-bottom: 22px; }
+    .ps-send { display: flex; align-items: center; gap: 22px; padding: 22px; border-radius: 22px; background: linear-gradient(135deg, #fff5f5, #fff); border: 1px solid #fecaca; }
+    .ps-sos {
+        position: relative; flex: none; width: 128px; height: 128px; border-radius: 50%; border: 0; cursor: pointer; color: #fff;
+        background: radial-gradient(circle at 35% 30%, #ff6b61, #e53935 55%, #b71c1c); box-shadow: 0 18px 40px rgba(229, 57, 53, .45);
+        font: 900 1.7rem/1 'Inter', sans-serif; letter-spacing: .04em; transition: transform .15s;
+    }
+    .ps-sos small { display: block; font-size: .62rem; font-weight: 700; letter-spacing: .12em; margin-top: 6px; opacity: .9; }
+    .ps-sos::before, .ps-sos::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(229, 57, 53, .45); animation: ps-wave 2.2s ease-out infinite; }
+    .ps-sos::after { animation-delay: 1.1s; }
+    .ps-sos:hover { transform: scale(1.04); }
+    .ps-sos:active { transform: scale(.97); }
+    .ps-sos[disabled] { filter: grayscale(.6); opacity: .6; cursor: not-allowed; transform: none; }
+    .ps-sos[disabled]::before, .ps-sos[disabled]::after { display: none; }
+    @@keyframes ps-wave { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.45); opacity: 0; } }
+    .ps-send h4 { font-size: 1.1rem; font-weight: 800; color: var(--aw-ink); margin: 0 0 6px; }
+    .ps-send p { color: var(--aw-muted); font-size: .9rem; margin: 0; line-height: 1.5; }
+
+    /* Hồ sơ */
+    .ps-profile { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .ps-profile .ps-avatar { width: 52px; height: 52px; border-radius: 16px; font-size: 1.1rem; }
+    .ps-profile b { display: block; color: var(--aw-ink); font-size: 1.05rem; }
+    .ps-profile small { color: var(--aw-muted); }
+    .ps-kv { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: .9rem; }
+    .ps-kv i { color: var(--aw-muted); text-align: center; margin-top: 3px; }
+    .ps-kv .warn { color: #b45309; font-weight: 600; }
+    .ps-hotline { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 20px; background: var(--aw-ink); color: #fff; text-decoration: none; margin-bottom: 22px; }
+    .ps-hotline:hover { color: #fff; background: #1e293b; }
+    .ps-hotline .num { margin-left: auto; font-size: 1.6rem; font-weight: 800; color: #f87171; }
+    .ps-tips { margin: 0; padding-left: 18px; color: var(--aw-text); font-size: .88rem; line-height: 1.6; }
+
+    /* Theo dõi */
+    .ps-track { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 22px; }
+    .ps-track { align-items: start; }
+    .ps-track-map { position: sticky; top: 84px; height: calc(100vh - 110px); min-height: 480px; border-radius: 22px; overflow: hidden; border: 1px solid var(--aw-border); box-shadow: var(--aw-shadow); }
+    #trackMap { position: absolute; inset: 0; }
+    .ps-fit { position: absolute; right: 14px; top: 14px; z-index: 500; }
+    .ps-status {
+        border-radius: 22px; padding: 22px; color: #fff; margin-bottom: 18px;
+        background: linear-gradient(135deg, #1e293b, #0f172a); box-shadow: var(--aw-shadow);
+    }
+    .ps-status.is-red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+    .ps-status.is-amber { background: linear-gradient(135deg, #f59e0b, #b45309); }
+    .ps-status.is-green { background: linear-gradient(135deg, #16a34a, #166534); }
+    .ps-status-kicker { font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .85; display: flex; align-items: center; gap: 8px; }
+    .ps-status h2 { font-size: 1.45rem; font-weight: 800; margin: 8px 0 6px; letter-spacing: -.02em; }
+    .ps-status p { margin: 0; opacity: .9; font-size: .92rem; line-height: 1.5; }
+    .ps-eta { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; }
+    .ps-eta b { font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+
+    .ps-steps { display: flex; margin: 4px 0 18px; }
+    .ps-step { flex: 1; text-align: center; position: relative; font-size: .7rem; font-weight: 600; color: var(--aw-muted); }
+    .ps-step::before { content: ""; position: absolute; top: 14px; left: -50%; width: 100%; height: 3px; background: var(--aw-border); }
+    .ps-step:first-child::before { display: none; }
+    .ps-step i { position: relative; z-index: 1; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 6px; background: var(--aw-bg); color: #94a3b8; font-size: 12px; border: 2px solid #fff; }
+    .ps-step.is-done i { background: var(--aw-green); color: #fff; }
+    .ps-step.is-done::before, .ps-step.is-now::before { background: var(--aw-green); }
+    .ps-step.is-now i { background: var(--aw-red); color: #fff; box-shadow: 0 0 0 5px rgba(229, 57, 53, .15); }
+    .ps-step.is-now { color: var(--aw-ink); }
+
+    .ps-person { display: flex; align-items: center; gap: 12px; }
+    .ps-person .ps-avatar { width: 48px; height: 48px; border-radius: 14px; background: #e0f2fe; color: #075985; }
+    .ps-person b { display: block; color: var(--aw-ink); }
+    .ps-person small { color: var(--aw-muted); }
+    .ps-plate { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 6px; border: 1.5px solid var(--aw-ink); font-weight: 800; font-size: .8rem; color: var(--aw-ink); letter-spacing: .04em; }
+    .ps-call { margin-left: auto; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--aw-green); color: #fff; text-decoration: none; flex: none; box-shadow: 0 8px 18px rgba(22, 163, 74, .3); }
+    .ps-call:hover { color: #fff; background: #15803d; }
+
+    .ps-radar { position: relative; width: 60px; height: 60px; flex: none; }
+    .ps-radar span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .6); animation: ps-wave 2.2s ease-out infinite; }
+    .ps-radar span:nth-child(2) { animation-delay: .7s; }
+    .ps-radar i { position: absolute; inset: 14px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--aw-red); }
+
+    /* Đánh giá */
+    .ps-rate { max-width: 640px; margin: 0 auto; text-align: center; }
+    .ps-rate-ic { width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 24px; display: grid; place-items: center; font-size: 32px; background: var(--aw-green-soft); color: var(--aw-green); }
+    .ps-rate h2 { font-size: 1.5rem; font-weight: 800; color: var(--aw-ink); margin: 0 0 6px; }
+    .ps-rate-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--aw-border); text-align: left; }
+    .ps-rate-row:last-of-type { border-bottom: 0; }
+    .ps-rate-row span { font-weight: 600; color: var(--aw-text); font-size: .92rem; }
+    .ps-stars { display: flex; gap: 4px; }
+    .ps-stars button { border: 0; background: none; padding: 2px; font-size: 1.5rem; color: #cbd5e1; cursor: pointer; transition: transform .1s, color .1s; }
+    .ps-stars button.is-on { color: #f59e0b; }
+    .ps-stars button:hover { transform: scale(1.15); }
+    .ps-stars.is-big button { font-size: 2.3rem; }
+    .ps-loading { display: grid; place-items: center; min-height: 60vh; color: var(--aw-muted); gap: 12px; text-align: center; }
+    [data-view][hidden] { display: none !important; }
+
+    @@media (max-width: 980px) {
+        .ps-grid, .ps-track { grid-template-columns: 1fr; }
+        .ps-track-map { position: relative; top: 0; height: 46vh; min-height: 300px; }
+        .ps-main { padding: 16px 12px; }
+        .ps-top { padding: 10px 14px; }
+        .ps-top .who small { display: none; }
+        .ps-top .who b { max-width: 38vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Điện thoại: thẻ SOS thành thanh dính đáy màn hình, luôn bấm được khi đang điền form */
+        .ps-aside { display: contents; }
+        .ps-grid { gap: 0; }
+        .ps-aside .ps-send {
+            order: 1; position: sticky; bottom: 12px; z-index: 600; margin-bottom: 22px;
+            padding: 12px 16px; gap: 14px; background: #fff; box-shadow: 0 14px 34px rgba(229, 57, 53, .28);
+        }
+        .ps-aside .ps-sos { width: 74px; height: 74px; font-size: 1.15rem; }
+        .ps-aside .ps-sos small { font-size: .5rem; margin-top: 3px; }
+        .ps-aside .ps-send h4 { font-size: 1rem; margin-bottom: 2px; }
+        .ps-aside .ps-send p { font-size: .8rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .ps-aside > :not(.ps-send) { order: 2; }
+    }
+    @@media (max-width: 560px) {
+        .ps-top .who { display: none; }
+        .ps-top .ps-avatar { margin-left: auto; }
+        .ps-types { grid-template-columns: 1fr 1fr; }
+        .ps-card { padding: 18px; border-radius: 18px; }
+    }
+</style>
+
+<header class="ps-top">
+    <a class="brand" href="/Patient/Sos"><span class="aw-brand-mark"><i class="fa-solid fa-truck-medical"></i></span> AmbulanceWay</a>
+    <div class="who"><b id="topName">@Context.Session.GetString("PATIENT_NAME")</b><small>Hồ sơ cấp cứu cá nhân</small></div>
+    <div class="ps-avatar" id="topAvatar"></div>
+    <a class="ps-out" href="/Patient/Logout" title="Đăng xuất" aria-label="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></a>
+</header>
+
+<main class="ps-main">
+    <div data-view="loading" class="ps-loading"><div><span class="aw-spin" style="width:28px;height:28px"></span><p class="mt-3">Đang tải hồ sơ...</p></div></div>
+
+    <!-- ========== Gửi SOS ========== -->
+    <div data-view="ready" hidden>
+        <div class="ps-grid">
+            <div>
+                <div class="ps-card">
+                    <h3><span class="n">1</span> Tình trạng bệnh nhân</h3>
+                    <p class="hint">Chọn gần đúng nhất để kíp cấp cứu chuẩn bị dụng cụ phù hợp.</p>
+                    <div class="ps-types" id="types">
+                        <label class="ps-type"><input type="radio" name="etype" value="Tai nạn giao thông" checked /><span><i class="fa-solid fa-car-burst"></i> Tai nạn giao thông</span></label>
+                        <label class="ps-type"><input type="radio" name="etype" value="Đột quỵ / Tai biến" /><span><i class="fa-solid fa-brain"></i> Đột quỵ / Tai biến</span></label>
+                        <label class="ps-type"><input type="radio" name="etype" value="Ngưng tuần hoàn / Đau tim" /><span><i class="fa-solid fa-heart-pulse"></i> Ngưng tuần hoàn / Đau tim</span></label>
+                        <label class="ps-type"><input type="radio" name="etype" value="Khó thở cấp tính" /><span><i class="fa-solid fa-lungs"></i> Khó thở cấp tính</span></label>
+                        <label class="ps-type"><input type="radio" name="etype" value="Khác" /><span><i class="fa-solid fa-kit-medical"></i> Khác</span></label>
+                    </div>
+                    <label class="aw-field mb-0"><span>Mô tả thêm (không bắt buộc)</span>
+                        <textarea class="aw-input" id="desc" rows="2" maxlength="500" placeholder="VD: Còn tỉnh, chảy máu ở chân, khó cử động..."></textarea>
+                    </label>
+                </div>
+
+                <div class="ps-card">
+                    <h3><span class="n">2</span> Vị trí cần xe tới</h3>
+                    <p class="hint">Kéo ghim hoặc bấm lên bản đồ nếu vị trí chưa chính xác.</p>
+                    <div class="ps-pick">
+                        <div id="pickMap"></div>
+                        <div class="ps-pick-msg" id="pickMsg"><span class="aw-spin"></span> Đang xác định vị trí của bạn...</div>
+                        <button type="button" class="ps-pick-btn" id="btnLocate"><i class="fa-solid fa-location-crosshairs"></i> Vị trí của tôi</button>
+                    </div>
+                    <label class="aw-field mb-0"><span>Địa chỉ <b>*</b></span>
+                        <input class="aw-input" id="addr" maxlength="300" placeholder="Số nhà, tên đường, phường, quận" />
+                    </label>
+                </div>
+
+            </div>
+
+            <aside class="ps-aside">
+                <div class="ps-send">
+                    <button class="ps-sos" id="btnSos" disabled>SOS<small>GỬI NGAY</small></button>
+                    <div>
+                        <h4>Gửi tín hiệu cấp cứu</h4>
+                        <p>Xe cấp cứu gần nhất sẽ nhận yêu cầu cùng hồ sơ y tế của bạn. Bạn theo dõi được xe trên bản đồ ngay sau khi gửi.</p>
+                    </div>
+                </div>
+
+                <a class="ps-hotline" href="tel:115">
+                    <i class="fa-solid fa-phone-volume fa-lg"></i>
+                    <div><b>Cần hướng dẫn sơ cứu?</b><br /><small style="opacity:.75">Tổng đài cấp cứu quốc gia</small></div>
+                    <span class="num">115</span>
+                </a>
+                <div class="ps-card">
+                    <div class="ps-profile">
+                        <div class="ps-avatar" id="pfAvatar"></div>
+                        <div><b id="pfName">--</b><small id="pfSub">--</small></div>
+                    </div>
+                    <div class="ps-kv" id="pfInfo"></div>
+                </div>
+                <div class="ps-card">
+                    <h3><i class="fa-solid fa-hand-holding-medical text-danger"></i> Trong lúc chờ xe</h3>
+                    <ul class="ps-tips mt-2">
+                        <li>Giữ bình tĩnh, ở cạnh bệnh nhân và giữ máy để tài xế gọi lại.</li>
+                        <li>Không cho bệnh nhân ăn uống; nghi chấn thương cột sống thì không di chuyển.</li>
+                        <li>Chuẩn bị giấy tờ, thuốc đang dùng; mở cửa, bật đèn để xe dễ tìm.</li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ========== Theo dõi xe ========== -->
+    <div data-view="tracking" hidden>
+        <div class="ps-track">
+            <div class="ps-track-map">
+                <div id="trackMap"></div>
+                <button class="aw-btn aw-btn-light aw-btn-sm ps-fit" id="btnFit"><i class="fa-solid fa-expand"></i> Xem toàn cảnh</button>
+            </div>
+            <div>
+                <div class="ps-status" id="stBox"></div>
+                <div class="ps-card">
+                    <div class="ps-steps" id="stSteps"></div>
+                    <div id="stDriver"></div>
+                </div>
+                <div class="ps-card" id="stHospital" hidden></div>
+                <div class="ps-card">
+                    <div class="ps-kv" id="stCase"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Đánh giá ========== -->
+    <div data-view="rating" hidden>
+        <div class="ps-card ps-rate">
+            <div class="ps-rate-ic"><i class="fa-solid fa-circle-check"></i></div>
+            <h2>Chuyến cấp cứu đã hoàn thành</h2>
+            <p class="hint" id="rateSub">Chúc bệnh nhân mau hồi phục. Đánh giá của bạn giúp chúng tôi phục vụ tốt hơn.</p>
+            <div class="ps-stars is-big justify-content-center mb-3" data-key="OverallRating"></div>
+            <div class="ps-rate-row"><span>Thời gian xe đến</span><div class="ps-stars" data-key="ResponseTimeRating"></div></div>
+            <div class="ps-rate-row"><span>Thái độ kíp cấp cứu</span><div class="ps-stars" data-key="DriverAttitudeRating"></div></div>
+            <div class="ps-rate-row"><span>Tình trạng xe</span><div class="ps-stars" data-key="VehicleConditionRating"></div></div>
+            <div class="ps-rate-row"><span>Xử lý tình huống</span><div class="ps-stars" data-key="SituationHandlingRating"></div></div>
+            <label class="aw-field mt-3 text-start"><span>Góp ý thêm</span><textarea class="aw-input" id="rateComment" rows="2" maxlength="1000" placeholder="Điều bạn hài lòng hoặc cần cải thiện..."></textarea></label>
+            <div class="d-flex gap-2">
+                <button class="aw-btn aw-btn-light" id="btnRateSkip" style="flex:1">Để sau</button>
+                <button class="aw-btn aw-btn-primary" id="btnRate" style="flex:2"><i class="fa-solid fa-paper-plane"></i> Gửi đánh giá</button>
+            </div>
+        </div>
+    </div>
+
+    <div data-view="thanks" hidden>
+        <div class="ps-card ps-rate">
+            <div class="ps-rate-ic"><i class="fa-solid fa-heart"></i></div>
+            <h2>Cảm ơn bạn!</h2>
+            <p class="hint">Đánh giá đã được ghi nhận. Chúc bệnh nhân sớm bình phục.</p>
+            <button class="aw-btn aw-btn-primary" id="btnHome"><i class="fa-solid fa-house"></i> Về trang chính</button>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+<script>
+(() => {
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const esc = AW.esc;
+    const WAITING = ['PENDING', 'DISPATCHING', 'OPEN', 'ASSIGNED'];
+
+    const S = {
+        token: null, me: null, view: 'loading',
+        pick: null, pickMap: null, pickMarker: null, addrTouched: false, geoSeq: 0,
+        caseId: null, snap: null, hub: null, eta: null, poll: null, elapsed: null,
+        trackMap: null, layers: null, autoFit: true, driverPos: null, routeAt: 0, routeFrom: null, route: null
+    };
+
+    async function call(method, url, body, retried) {
+        try {
+            return await AW.api(method, url, { token: S.token, body });
+        } catch (e) {
+            if (e.status === 401 && !retried) {
+                try { S.token = (await AW.api('GET', '/Patient/Token')).token; return call(method, url, body, true); }
+                catch { location.href = '/Patient/Register'; }
+            }
+            throw e;
+        }
+    }
+
+    function show(view) {
+        S.view = view;
+        document.querySelectorAll('[data-view]').forEach((el) => el.hidden = el.dataset.view !== view);
+        if (view === 'ready') setTimeout(() => S.pickMap && S.pickMap.invalidateSize(), 50);
+        if (view === 'tracking') setTimeout(() => S.trackMap && S.trackMap.invalidateSize(), 50);
+        window.scrollTo({ top: 0 });
+    }
+
+    function age(birth) {
+        const d = birth ? new Date(birth) : null;
+        if (!d || isNaN(d)) return null;
+        const n = new Date();
+        let a = n.getFullYear() - d.getFullYear();
+        if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--;
+        return a >= 0 && a < 130 ? a : null;
+    }
+
+    function tel(phone) {
+        const clean = String(phone || '').replace(/[^\d+]/g, '');
+        return clean.length >= 8 ? '<a href="tel:' + clean + '">' + esc(phone) + '</a>' : esc(phone || '--');
+    }
+
+    // ===================== Hồ sơ =====================
+    function renderProfile() {
+        const p = S.me;
+        const a = age(p.birthDate);
+        $('topName').textContent = p.fullName;
+        $('topAvatar').textContent = $('pfAvatar').textContent = AW.initials(p.fullName);
+        $('pfName').textContent = p.fullName;
+        $('pfSub').textContent = [p.gender, a != null ? a + ' tuổi' : null, p.phoneNumber].filter(Boolean).join(' · ');
+        $('pfInfo').innerHTML =
+            '<i class="fa-solid fa-pills"></i><span class="' + (p.drugAllergies ? 'warn' : '') + '">Dị ứng thuốc: ' + esc(p.drugAllergies || 'không ghi nhận') + '</span>' +
+            '<i class="fa-solid fa-notes-medical"></i><span>Tiền sử: ' + esc(p.medicalHistory || 'không ghi nhận') + '</span>' +
+            '<i class="fa-solid fa-house"></i><span>' + esc(p.permanentAddress || '--') + '</span>' +
+            '<i class="fa-solid fa-people-roof"></i><span>Người nhà: ' + esc(p.emergencyContactName || '--') + ' · ' + tel(p.emergencyContactPhone) + '</span>';
+    }
+
+    // ===================== Chọn vị trí =====================
+    function initPickMap() {
+        if (S.pickMap) return;
+        S.pickMap = AW.baseMap('pickMap').setView([AW.HCMC.lat, AW.HCMC.lng], 13);
+        L.control.zoom({ position: 'bottomleft' }).addTo(S.pickMap);
+        S.pickMap.on('click', (e) => setPick({ lat: e.latlng.lat, lng: e.latlng.lng }, 'map'));
+        if (window.ResizeObserver) new ResizeObserver(() => S.pickMap.invalidateSize()).observe($('pickMap'));
+        $('btnLocate').onclick = () => locate(true);
+        $('addr').addEventListener('input', () => { S.addrTouched = $('addr').value.trim().length > 0; updateSosButton(); });
+        locate(false);
+    }
+
+    function pickMsg(html, ok) {
+        const el = $('pickMsg');
+        el.innerHTML = html;
+        el.classList.toggle('is-ok', !!ok);
+    }
+
+    function locate(user) {
+        if (!navigator.geolocation) return pickMsg('<i class="fa-solid fa-hand-pointer"></i> Trình duyệt không hỗ trợ định vị — bấm lên bản đồ để chọn vị trí.');
+        pickMsg('<span class="aw-spin"></span> Đang xác định vị trí của bạn...');
+        navigator.geolocation.getCurrentPosition(
+            (p) => setPick({ lat: p.coords.latitude, lng: p.coords.longitude }, 'gps', p.coords.accuracy),
+            (err) => {
+                pickMsg('<i class="fa-solid fa-hand-pointer"></i> ' + (err.code === 1 ? 'Bạn chưa cho phép định vị' : 'Không lấy được vị trí') + ' — bấm lên bản đồ để chọn chỗ bạn đang đứng.');
+                if (user) AW.toast('Không lấy được vị trí. Hãy bật định vị cho trình duyệt hoặc chọn trên bản đồ.', 'warn');
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+        );
+    }
+
+    async function setPick(pos, source, accuracy) {
+        S.pick = pos;
+        if (!S.pickMarker) {
+            S.pickMarker = L.marker([pos.lat, pos.lng], { icon: AW.icons.patient(true), draggable: true }).addTo(S.pickMap);
+            S.pickMarker.on('dragend', () => { const ll = S.pickMarker.getLatLng(); setPick({ lat: ll.lat, lng: ll.lng }, 'map'); });
+        } else {
+            S.pickMarker.setLatLng([pos.lat, pos.lng]);
+        }
+        S.pickMap.setView([pos.lat, pos.lng], Math.max(S.pickMap.getZoom(), 16), { animate: true });
+        pickMsg('<i class="fa-solid fa-circle-check"></i> ' + (source === 'gps'
+            ? 'Đã định vị' + (accuracy ? ' (sai số ~' + Math.round(accuracy) + ' m)' : '') + '. Kéo ghim nếu chưa đúng chỗ.'
+            : 'Đã chọn vị trí trên bản đồ.'), true);
+        updateSosButton();
+        if (S.addrTouched) return;
+        const seq = ++S.geoSeq;
+        $('addr').placeholder = 'Đang tìm địa chỉ...';
+        const name = await AW.reverseGeocode(pos.lat, pos.lng);
+        if (seq !== S.geoSeq || S.addrTouched) return;
+        $('addr').placeholder = 'Số nhà, tên đường, phường, quận';
+        $('addr').value = name || ('Vị trí ' + pos.lat.toFixed(5) + ', ' + pos.lng.toFixed(5));
+        updateSosButton();
+    }
+
+    function updateSosButton() {
+        $('btnSos').disabled = !S.pick || !$('addr').value.trim();
+    }
+
+    $('btnSos').onclick = async () => {
+        const type = document.querySelector('input[name=etype]:checked').value;
+        const address = $('addr').value.trim();
+        if (!S.pick || !address) return;
+        const ok = await AW.confirm({
+            title: 'Gửi tín hiệu cấp cứu?', icon: 'fa-truck-medical',
+            html: '<b>' + esc(type) + '</b><br>' + esc(address) + '<br><small>Xe gần nhất sẽ được điều tới vị trí này.</small>',
+            okText: 'Gửi SOS ngay', cancelText: 'Kiểm tra lại'
+        });
+        if (!ok) return;
+        const btn = $('btnSos');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="aw-spin" style="width:28px;height:28px"></span>';
+        try {
+            const res = await AW.api('POST', '/api/Sos', {
+                body: {
+                    EmergencyType: type, Description: $('desc').value.trim(), PatientProfileId: S.me.id,
+                    PatientLat: S.pick.lat, PatientLng: S.pick.lng, PatientAddress: address
+                }
+            });
+            AW.toast('Đã gửi SOS. Đang tìm xe gần bạn nhất...', 'success');
+            await openCase(res.caseId);
+        } catch (e) {
+            AW.toast(e.message, 'error');
+        } finally {
+            btn.innerHTML = 'SOS<small>GỬI NGAY</small>';
+            updateSosButton();
+        }
+    };
+
+    // ===================== Theo dõi ca =====================
+    function initTrackMap() {
+        if (S.trackMap) return;
+        S.trackMap = AW.baseMap('trackMap').setView([AW.HCMC.lat, AW.HCMC.lng], 14);
+        L.control.zoom({ position: 'bottomright' }).addTo(S.trackMap);
+        S.layers = { route: L.layerGroup().addTo(S.trackMap), patient: null, driver: null, hospital: null };
+        S.trackMap.on('dragstart', () => { S.autoFit = false; });
+        // Khung bản đồ đổi kích thước theo bố cục (xoay màn hình, cột phải dài ra): báo cho Leaflet vẽ lại
+        if (window.ResizeObserver) new ResizeObserver(() => S.trackMap.invalidateSize()).observe($('trackMap'));
+        $('btnFit').onclick = () => { S.autoFit = true; fit(); };
+    }
+
+    async function openCase(caseId) {
+        S.caseId = caseId;
+        S.eta = null;
+        S.driverPos = null;
+        S.route = null;
+        S.autoFit = true;
+        initTrackMap();
+        show('tracking');
+        startHub();
+        await refreshCase();
+        clearInterval(S.poll);
+        S.poll = setInterval(() => { if (!document.hidden) refreshCase(); }, 15000);
+        clearInterval(S.elapsed);
+        S.elapsed = setInterval(() => { if (S.snap && WAITING.includes(S.snap.status)) renderStatus(); }, 1000);
+    }
+
+    async function refreshCase() {
+        if (!S.caseId) return;
+        try {
+            const snap = await call('GET', '/api/mobile/patient/cases/' + S.caseId);
+            applySnapshot(snap);
+        } catch (e) {
+            if (e.status === 404) { stopTracking(); show('ready'); }
+        }
+    }
+
+    function applySnapshot(snap) {
+        const prev = S.snap;
+        S.snap = snap;
+        if (snap.driverLocation && !S.driverPos) S.driverPos = { lat: snap.driverLocation.lat, lng: snap.driverLocation.lng };
+        if (snap.status === 'COMPLETED') {
+            stopTracking();
+            if (snap.hasRated || skipped(snap.id)) { show('ready'); initPickMap(); }
+            else openRating();
+            return;
+        }
+        if (snap.status === 'CANCELLED' || snap.status === 'REJECTED') {
+            stopTracking();
+            AW.toast('Ca cấp cứu #' + snap.id + ' đã bị hủy. Bạn có thể gửi yêu cầu mới.', 'warn', 7000);
+            show('ready');
+            initPickMap();
+            return;
+        }
+        if (prev && prev.status !== snap.status) announce(snap.status);
+        renderTracking();
+    }
+
+    function announce(status) {
+        const d = S.snap.driver;
+        if (status === 'ACCEPTED' && d) AW.toast('Tài xế ' + (d.name || d.username) + ' đã nhận ca và đang tới.', 'success', 6000);
+        if (status === 'PICKED_UP') AW.toast('Đã đón bệnh nhân. Đang liên hệ bệnh viện gần nhất.', 'info', 6000);
+        if (status === 'DELIVERING' && S.snap.hospital) AW.toast('Xe đang đưa bệnh nhân tới ' + S.snap.hospital.name + '.', 'success', 6000);
+    }
+
+    function stopTracking() {
+        clearInterval(S.poll);
+        clearInterval(S.elapsed);
+        const hub = S.hub;
+        S.hub = null;
+        if (hub) hub.stop().catch(() => { });
+    }
+
+    function startHub() {
+        if (S.hub) return;
+        const hub = new signalR.HubConnectionBuilder().withUrl('/ambulanceHub').withAutomaticReconnect([0, 2000, 5000, 10000, 20000]).build();
+        const mine = (d) => !d.caseId || d.caseId === S.caseId;
+        hub.on('CaseAccepted', (raw) => { const d = AW.camel(raw); if (mine(d)) refreshCase(); });
+        hub.on('CaseStatusUpdated', (raw) => { const d = AW.camel(raw); if (mine(d)) refreshCase(); });
+        hub.on('HospitalConfirmed', () => refreshCase());
+        hub.on('EtaUpdated', (raw) => {
+            const d = AW.camel(raw);
+            if (!mine(d)) return;
+            S.eta = { km: Number(d.distanceKm), minutes: Number(d.durationMinutes), at: Date.now() };
+            renderStatus();
+        });
+        hub.on('DriverLocationUpdate', (raw) => {
+            const d = AW.camel(raw);
+            S.driverPos = { lat: d.lat, lng: d.lng };
+            drawDriver();
+        });
+        hub.onreconnected(() => { hub.invoke('JoinCase', S.caseId).catch(() => { }); refreshCase(); });
+        S.hub = hub;
+        const connect = async () => {
+            if (S.hub !== hub) return;
+            try { await hub.start(); await hub.invoke('JoinCase', S.caseId); }
+            catch { setTimeout(connect, 5000); }
+        };
+        hub.onclose(() => { if (S.hub === hub) setTimeout(connect, 5000); });
+        connect();
+    }
+
+    const STEP_OF = { PENDING: 0, DISPATCHING: 0, OPEN: 0, ASSIGNED: 0, ACCEPTED: 1, PICKED_UP: 2, DELIVERING: 3, COMPLETED: 4 };
+
+    function renderTracking() {
+        renderStatus();
+        const s = S.snap;
+        const idx = STEP_OF[s.status] ?? 0;
+        const items = [['fa-tower-broadcast', 'Đã gửi'], ['fa-truck-medical', 'Xe đang tới'], ['fa-user-check', 'Đã đón'], ['fa-hospital', 'Về viện'], ['fa-flag-checkered', 'Xong']];
+        $('stSteps').innerHTML = items.map((it, i) =>
+            '<div class="ps-step ' + (i < idx ? 'is-done' : i === idx ? 'is-now' : '') + '"><i class="fa-solid ' + (i < idx ? 'fa-check' : it[0]) + '"></i>' + it[1] + '</div>').join('');
+
+        const d = s.driver;
+        $('stDriver').innerHTML = d
+            ? '<div class="ps-person"><div class="ps-avatar">' + esc(AW.initials(d.name || d.username)) + '</div><div><b>' + esc(d.name || d.username) + '</b>' +
+              '<small>Tài xế cấp cứu</small><br><span class="ps-plate">' + esc(d.vehicle || '--') + '</span></div>' +
+              (d.phone && String(d.phone).replace(/\D/g, '').length >= 8 ? '<a class="ps-call" href="tel:' + esc(String(d.phone).replace(/[^\d+]/g, '')) + '" title="Gọi tài xế"><i class="fa-solid fa-phone"></i></a>' : '') + '</div>'
+            : '<div class="ps-person"><div class="ps-avatar" style="background:var(--aw-bg);color:var(--aw-muted)"><i class="fa-solid fa-user-clock"></i></div><div><b>Chưa có tài xế</b><small>Hệ thống đang gửi yêu cầu tới các xe gần bạn</small></div></div>';
+
+        const h = s.hospital;
+        $('stHospital').hidden = !h;
+        if (h) {
+            $('stHospital').innerHTML = '<h3><i class="fa-solid fa-hospital" style="color:var(--aw-green)"></i> ' + esc(h.name) + '</h3>' +
+                '<div class="ps-kv mt-2">' + (h.assignedRoom ? '<i class="fa-solid fa-door-open"></i><span>Phòng tiếp nhận: <b>' + esc(h.assignedRoom) + '</b></span>' : '') +
+                (h.address ? '<i class="fa-solid fa-location-dot"></i><span>' + esc(h.address) + '</span>' : '') + '</div>';
+        }
+
+        $('stCase').innerHTML =
+            '<i class="fa-solid fa-hashtag"></i><span>Ca <b>#' + s.id + '</b> · ' + esc(s.emergencyType) + '</span>' +
+            (s.description ? '<i class="fa-solid fa-comment-medical"></i><span>' + esc(s.description) + '</span>' : '') +
+            '<i class="fa-solid fa-location-dot"></i><span>' + esc(s.patientAddress) + '</span>' +
+            '<i class="fa-regular fa-clock"></i><span>Gửi lúc ' + AW.fmtClock(AW.parseServerTime(s.createdAt)) + '</span>' +
+            '<i class="fa-solid fa-phone-volume" style="color:var(--aw-red)"></i><span>Tình trạng xấu đi? Gọi <a href="tel:115"><b>115</b></a></span>' +
+            (WAITING.includes(s.status) || s.status === 'ACCEPTED'
+                ? '<span></span><button class="aw-btn aw-btn-light aw-btn-sm mt-2" id="btnCancel" style="color:var(--aw-red);justify-self:start"><i class="fa-solid fa-ban"></i> Hủy yêu cầu cấp cứu</button>'
+                : '');
+        const cancelBtn = document.getElementById('btnCancel');
+        if (cancelBtn) cancelBtn.onclick = cancelCase;
+        drawMap();
+    }
+
+    function renderStatus() {
+        const s = S.snap;
+        if (!s) return;
+        const box = $('stBox');
+        let cls = '', kicker = '', title = '', text = '', extra = '';
+        const eta = currentEta();
+        if (WAITING.includes(s.status)) {
+            const sec = Math.max(0, Math.floor((Date.now() - (AW.parseServerTime(s.createdAt) || new Date()).getTime()) / 1000));
+            cls = 'is-red';
+            kicker = '<span class="aw-dot is-live"></span> Đang điều phối · ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+            title = 'Đang tìm xe gần bạn nhất';
+            text = 'Yêu cầu đã tới các tài xế đang trực quanh bạn. Giữ máy, xe sẽ nhận ca trong giây lát.';
+            box.innerHTML = '<div class="d-flex gap-3 align-items-center"><div class="ps-radar"><span></span><span></span><i class="fa-solid fa-truck-medical"></i></div><div>' +
+                '<div class="ps-status-kicker">' + kicker + '</div><h2>' + title + '</h2></div></div><p class="mt-2">' + text + '</p>';
+            box.className = 'ps-status ' + cls;
+            return;
+        }
+        if (s.status === 'ACCEPTED') {
+            cls = 'is-red'; kicker = 'Xe đang tới'; title = 'Xe cấp cứu đang trên đường tới';
+            text = 'Tài xế đã nhận ca và đang di chuyển tới vị trí của bạn.';
+        } else if (s.status === 'PICKED_UP') {
+            cls = 'is-amber'; kicker = 'Đã đón bệnh nhân'; title = 'Bệnh nhân đã lên xe';
+            text = 'Kíp cấp cứu đang liên hệ bệnh viện phù hợp gần nhất.';
+        } else if (s.status === 'DELIVERING') {
+            cls = 'is-green'; kicker = 'Đang về bệnh viện'; title = s.hospital ? 'Đang tới ' + s.hospital.name : 'Đang về bệnh viện';
+            text = s.hospital && s.hospital.assignedRoom ? 'Bệnh viện đã chuẩn bị: ' + s.hospital.assignedRoom + '.' : 'Bệnh viện đã được báo trước để chuẩn bị tiếp nhận.';
+        }
+        if (eta && (s.status === 'ACCEPTED' || s.status === 'DELIVERING')) {
+            extra = '<div class="ps-eta"><b>' + AW.fmtMinutes(eta.minutes) + '</b><span>' + AW.fmtKm(eta.km) + ' · dự kiến ' + AW.fmtClock(new Date(Date.now() + eta.minutes * 60000)) + '</span></div>';
+        }
+        box.className = 'ps-status ' + cls;
+        box.innerHTML = '<div class="ps-status-kicker"><span class="aw-dot is-live"></span> ' + esc(kicker) + '</div><h2>' + esc(title) + '</h2><p>' + esc(text) + '</p>' + extra;
+    }
+
+    // Ưu tiên ETA tài xế gửi (theo lộ trình thực), không có thì dùng lộ trình tự tính
+    function currentEta() {
+        if (S.eta && Date.now() - S.eta.at < 90000) return S.eta;
+        if (S.route) return { km: S.route.distanceKm, minutes: S.route.minutes };
+        return null;
+    }
+
+    function target() {
+        const s = S.snap;
+        if (!s) return null;
+        if (s.status === 'DELIVERING' && s.hospital) return { lat: s.hospital.lat, lng: s.hospital.lng };
+        if (s.status === 'ACCEPTED') return { lat: s.patientLat, lng: s.patientLng };
+        return null;
+    }
+
+    function drawMap() {
+        const s = S.snap;
+        const m = S.trackMap;
+        if (!S.layers.patient) {
+            S.layers.patient = L.marker([s.patientLat, s.patientLng], { icon: AW.icons.patient(true) })
+                .bindTooltip('Vị trí của bạn', { className: 'aw-tip', direction: 'top', offset: [0, -18], permanent: true }).addTo(m);
+            m.setView([s.patientLat, s.patientLng], 15);
+        }
+        if (s.hospital && s.hospital.lat) {
+            if (!S.layers.hospital) {
+                S.layers.hospital = L.marker([s.hospital.lat, s.hospital.lng], { icon: AW.icons.hospital(false, true) })
+                    .bindTooltip(esc(s.hospital.name), { className: 'aw-tip', direction: 'top', offset: [0, -18] }).addTo(m);
+            } else {
+                S.layers.hospital.setLatLng([s.hospital.lat, s.hospital.lng]);
+            }
+        }
+        drawDriver();
+    }
+
+    function drawDriver() {
+        if (!S.trackMap || !S.driverPos || !S.snap || WAITING.includes(S.snap.status)) return;
+        if (!S.layers.driver) {
+            S.layers.driver = L.marker([S.driverPos.lat, S.driverPos.lng], { icon: AW.icons.car(), zIndexOffset: 1000 })
+                .bindTooltip('Xe cấp cứu', { className: 'aw-tip', direction: 'top', offset: [0, -22] }).addTo(S.trackMap);
+            fit();
+        } else {
+            AW.glide(S.layers.driver, S.driverPos, 900);
+        }
+        updateRoute();
+        if (S.autoFit) {
+            const b = S.trackMap.getBounds().pad(-0.15);
+            if (!b.contains([S.driverPos.lat, S.driverPos.lng])) fit();
+        }
+    }
+
+    // Vẽ lộ trình xe → đích, tính lại khi xe đi được >150 m hoặc sau 30 giây
+    async function updateRoute() {
+        const to = target();
+        if (!to || !S.driverPos) { S.layers.route.clearLayers(); S.route = null; return; }
+        const key = S.snap.status;
+        const moved = S.routeFrom ? AW.haversineKm(S.routeFrom, S.driverPos) : Infinity;
+        if (S.routeKey === key && moved < 0.15 && Date.now() - S.routeAt < 30000) return;
+        S.routeAt = Date.now();
+        S.routeKey = key;
+        S.routeFrom = { lat: S.driverPos.lat, lng: S.driverPos.lng };
+        const plan = await AW.route(S.routeFrom, to);
+        if (S.routeKey !== key || !S.snap) return;
+        S.route = plan;
+        S.layers.route.clearLayers();
+        const color = key === 'DELIVERING' ? '#16a34a' : '#e53935';
+        L.polyline(plan.points, { color: '#fff', weight: 10, opacity: .9 }).addTo(S.layers.route);
+        L.polyline(plan.points, { color, weight: 5, opacity: .9, dashArray: plan.estimate ? '8 10' : null }).addTo(S.layers.route);
+        renderStatus();
+    }
+
+    function fit() {
+        const s = S.snap;
+        if (!s || !S.trackMap) return;
+        const pts = [[s.patientLat, s.patientLng]];
+        if (S.driverPos && !WAITING.includes(s.status)) pts.push([S.driverPos.lat, S.driverPos.lng]);
+        if (s.hospital && s.hospital.lat && s.status !== 'ACCEPTED') pts.push([s.hospital.lat, s.hospital.lng]);
+        if (pts.length > 1) S.trackMap.fitBounds(L.latLngBounds(pts), { padding: [70, 70], maxZoom: 16 });
+        else S.trackMap.setView(pts[0], 15);
+    }
+
+    // Hủy SOS khi xe chưa đón bệnh nhân (máy chủ kiểm tra lại trạng thái)
+    async function cancelCase() {
+        const reasons = ['Bệnh nhân đã ổn, không cần xe nữa', 'Đã tự đến bệnh viện', 'Gửi nhầm yêu cầu', 'Lý do khác'];
+        const ok = await AW.confirm({
+            title: 'Hủy yêu cầu cấp cứu?', icon: 'fa-ban',
+            html: 'Tài xế đang được điều tới sẽ nhận thông báo hủy. Nếu tình trạng xấu đi, hãy gọi 115.' +
+                '<select id="cancelReason" class="aw-input mt-3">' + reasons.map((r) => '<option>' + esc(r) + '</option>').join('') + '</select>',
+            okText: 'Hủy yêu cầu', cancelText: 'Không hủy'
+        });
+        if (!ok) return;
+        const reason = AW.confirm.lastValue || null;
+        try {
+            await call('POST', '/api/mobile/patient/cases/' + S.caseId + '/cancel', { Reason: reason });
+            const id = S.caseId;
+            stopTracking();
+            S.caseId = null;
+            S.snap = null;
+            AW.toast('Đã hủy yêu cầu cấp cứu #' + id + '.', 'success');
+            show('ready');
+            initPickMap();
+        } catch (e) {
+            AW.toast(e.message, 'error');
+            refreshCase();
+        }
+    }
+
+    // ===================== Đánh giá =====================
+    const ratings = {};
+    function skipped(id) { try { return sessionStorage.getItem('aw.rate.skip.' + id) === '1'; } catch { return false; } }
+
+    function openRating() {
+        document.querySelectorAll('.ps-stars').forEach((el) => {
+            const key = el.dataset.key;
+            ratings[key] = 5;
+            el.innerHTML = [1, 2, 3, 4, 5].map((n) => '<button type="button" data-n="' + n + '" aria-label="' + n + ' sao"><i class="fa-solid fa-star"></i></button>').join('');
+            paint(el);
+            el.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; ratings[key] = Number(b.dataset.n); paint(el); };
+        });
+        const d = S.snap && S.snap.driver;
+        if (d) $('rateSub').textContent = 'Tài xế ' + (d.name || d.username) + ' đã hoàn thành chuyến. Đánh giá của bạn giúp chúng tôi phục vụ tốt hơn.';
+        show('rating');
+    }
+
+    function paint(el) {
+        const v = ratings[el.dataset.key];
+        el.querySelectorAll('button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.n) <= v));
+    }
+
+    $('btnRate').onclick = async () => {
+        const btn = $('btnRate');
+        btn.disabled = true;
+        try {
+            await call('POST', '/api/mobile/patient/cases/' + S.snap.id + '/rating', Object.assign({}, ratings, { Comment: $('rateComment').value.trim() || null }));
+            show('thanks');
+        } catch (e) {
+            AW.toast(e.message, 'error');
+            if (e.status === 400) { show('ready'); initPickMap(); }
+        } finally {
+            btn.disabled = false;
+        }
+    };
+    $('btnRateSkip').onclick = () => {
+        try { sessionStorage.setItem('aw.rate.skip.' + S.snap.id, '1'); } catch { }
+        show('ready');
+        initPickMap();
+    };
+    $('btnHome').onclick = () => { show('ready'); initPickMap(); };
+
+    // ===================== Khởi động =====================
+    (async function init() {
+        try {
+            S.token = (await AW.api('GET', '/Patient/Token')).token;
+            S.me = await call('GET', '/api/mobile/patient/me');
+        } catch (e) {
+            if (e.status === 401) { location.href = '/Patient/Register'; return; }
+            document.querySelector('[data-view=loading]').innerHTML = '<div><i class="fa-solid fa-triangle-exclamation fa-2x text-danger"></i><p class="mt-3">' + esc(e.message) + '</p>' +
+                '<button class="aw-btn aw-btn-primary" onclick="location.reload()">Thử lại</button></div>';
+            return;
+        }
+        renderProfile();
+        try {
+            const active = await call('GET', '/api/mobile/patient/cases/active');
+            if (active && active.hasCase) {
+                const c = active.case;
+                if (c.status === 'COMPLETED') {
+                    S.snap = c;
+                    if (!skipped(c.id)) return openRating();
+                } else {
+                    return openCase(c.id);
+                }
+            }
+        } catch { /* vẫn cho gửi SOS mới */ }
+        show('ready');
+        initPickMap();
+    })();
+})();
+</script>
+}

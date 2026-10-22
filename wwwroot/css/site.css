@@ -46,7 +46,10 @@ body.dark {
     font-weight: bold;
     cursor: pointer;
     z-index: 9999;
+    /* tránh bị đè khi navbar có chiều cao khác nhau */
+    white-space: nowrap;
 }
+
 
 .btn-logout:hover {
     background: #b71c1c;
@@ -54,9 +57,10 @@ body.dark {
 
 /* THEME BUTTON */
 #toggleTheme {
-    position: absolute;
-    top: 90px;
-    right: 20px;
+    /* dùng fixed để không phụ thuộc vào phần tử cha của trang */
+    position: fixed;
+    top: 16px;
+    right: 92px;
     width: 42px;
     height: 42px;
     display: flex;
@@ -68,6 +72,7 @@ body.dark {
     cursor: pointer;
     z-index: 1000;
 }
+
 
 body.dark #toggleTheme {
     background: #333;
@@ -308,18 +313,22 @@ body.dark .emergency-box {
     animation: spinLogin 4s linear infinite;
 }
 @keyframes siren-blink {
-        0% { transform: rotate(0deg); filter: brightness(1); }
-        25% { transform: rotate(-15deg); filter: brightness(1.5); }
-        50% { transform: rotate(0deg); filter: brightness(1); }
-        75% { transform: rotate(15deg); filter: brightness(1.5); }
-        100% { transform: rotate(0deg); filter: brightness(1); }
-    }
-
+    0% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+    25% { transform: rotate(-15deg) scale(1.1); filter: brightness(1.8); } SSSSSSSSS
+    50% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+    75% { transform: rotate(15deg) scale(1.1); filter: brightness(1.8); }
+    100% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+}
     .siren-icon {
         display: inline-block;
+        font-size: 3rem; 
         animation: siren-blink 0.8s infinite ease-in-out;
+        transform-origin: bottom center; 
+        vertical-align: middle;
     }
 body.dark {
     background: #121212;
     color: white;
 }
+/* Kiểu của trang đăng nhập cũ đã chuyển vào Views/Account/Login.cshtml.
+   Trước đây ".btn { color: white; width: 100% }" ở đây áp lên mọi trang quản trị, làm các nút viền (Sửa, Xóa, Lọc, Trước/Sau) bị trắng mất chữ. */

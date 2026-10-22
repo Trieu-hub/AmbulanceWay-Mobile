@@ -1,0 +1,339 @@
+@model AmbulanceWay.Models.User
+
+@{
+    ViewData["Title"] = "Chỉnh sửa tài khoản - AmbulanceWay";
+    Layout = "_Layout";
+    var driver = ViewBag.Driver as AmbulanceWay.Models.Driver;
+    bool isDriver = Model.Role == "DRIVER" || Model.Role == "STAFF";
+}
+
+<style>
+    body { background: #0f1117; }
+
+    .edit-wrapper {
+        min-height: calc(100vh - 60px);
+        background: linear-gradient(135deg, #0f1117 0%, #1a1f2e 100%);
+        padding: 2rem 1rem;
+    }
+
+    .edit-card {
+        background: #1e2433;
+        border: 1px solid #2d3748;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        overflow: hidden;
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
+    .edit-header {
+        background: linear-gradient(135deg, #c0392b, #e74c3c);
+        padding: 1.5rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .edit-header h4 {
+        color: #fff;
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+
+    .edit-header .avatar-circle {
+        width: 48px;
+        height: 48px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .edit-body {
+        padding: 2rem;
+    }
+
+    .section-title {
+        color: #a0aec0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #2d3748;
+    }
+
+    .form-label {
+        color: #cbd5e0;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
+    .form-control, .form-select {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 0.6rem 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background: #374151;
+        border-color: #e74c3c;
+        color: #f7fafc;
+        box-shadow: 0 0 0 3px rgba(231,76,60,0.15);
+    }
+
+    .form-control::placeholder { color: #718096; }
+
+    .driver-section {
+        background: rgba(231, 76, 60, 0.06);
+        border: 1px solid rgba(231, 76, 60, 0.2);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-top: 1.5rem;
+    }
+
+    .driver-section .section-title {
+        color: #fc8181;
+        border-color: rgba(231,76,60,0.3);
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #c0392b, #e74c3c);
+        border: none;
+        color: white;
+        padding: 0.7rem 2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(231,76,60,0.4);
+        color: white;
+    }
+
+    .btn-back {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #a0aec0;
+        padding: 0.7rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-back:hover {
+        background: #374151;
+        color: #e2e8f0;
+    }
+
+    .id-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border-radius: 20px;
+        padding: 0.2rem 0.8rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .role-badge.driver { background: rgba(72,187,120,0.15); color: #68d391; border: 1px solid rgba(72,187,120,0.3); }
+    .role-badge.admin { background: rgba(231,76,60,0.15); color: #fc8181; border: 1px solid rgba(231,76,60,0.3); }
+
+    .hint-text { color: #718096; font-size: 0.78rem; margin-top: 0.25rem; }
+</style>
+
+<div class="edit-wrapper">
+    <div class="edit-card">
+        <!-- Header -->
+        <div class="edit-header">
+            <div class="avatar-circle">
+                @if (isDriver)
+                {
+                    <i class="fas fa-ambulance"></i>
+                }
+                else
+                {
+                    <i class="fas fa-shield-alt"></i>
+                }
+            </div>
+            <div>
+                <h4>Chỉnh sửa tài khoản</h4>
+                <small style="color:rgba(255,255,255,0.7);">@Model.Username</small>
+            </div>
+            <div class="id-badge ms-auto">
+                <i class="fas fa-hashtag" style="font-size:0.7rem;"></i> ID @Model.Id
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="edit-body">
+            <form method="post" asp-action="Update" asp-controller="Admin">
+                <input type="hidden" asp-for="Id" />
+
+                <!-- Thông tin tài khoản -->
+                <div class="section-title"><i class="fas fa-key me-1"></i> Thông tin đăng nhập</div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên đăng nhập</label>
+                        <input asp-for="Username" id="Username" class="form-control" placeholder="Tên đăng nhập..." />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mật khẩu mới</label>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Để trống nếu không đổi" />
+                        <div class="hint-text">* Bỏ trống nếu không muốn thay đổi mật khẩu</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quyền hạn</label>
+                        <select name="Role" id="roleSelect" class="form-select" onchange="toggleDriverSection()">
+                            @if (isDriver)
+                            {
+                                <option value="DRIVER" selected>🚑 Tài xế (DRIVER)</option>
+                                <option value="ADMIN">🛡️ Quản trị (ADMIN)</option>
+                            }
+                            else
+                            {
+                                <option value="DRIVER">🚑 Tài xế (DRIVER)</option>
+                                <option value="ADMIN" selected>🛡️ Quản trị (ADMIN)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Trạng thái tài khoản</label>
+                        <select name="Status" class="form-select">
+                            @if (Model.Status == "ACTIVE")
+                            {
+                                <option value="ACTIVE" selected>✅ Hoạt động</option>
+                                <option value="LOCKED">🔒 Khóa</option>
+                            }
+                            else
+                            {
+                                <option value="ACTIVE">✅ Hoạt động</option>
+                                <option value="LOCKED" selected>🔒 Khóa</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Thông tin tài xế (hiện khi Role = DRIVER) -->
+                <div class="driver-section" id="driverSection" style="display: @(isDriver ? "block" : "none")">
+                    <div class="section-title"><i class="fas fa-ambulance me-1"></i> Thông tin xe & Tài xế</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Họ và tên tài xế</label>
+                            <input type="text" name="DriverName" value="@(driver?.DriverName ?? "")"
+                                   class="form-control" placeholder="Nguyễn Văn A" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="tel" name="Phone" value="@(driver?.Phone ?? "")"
+                                   class="form-control" placeholder="090x xxx xxx" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Biển số xe</label>
+                            <input type="text" name="Vehicle" value="@(driver?.Vehicle ?? "")"
+                                   class="form-control" placeholder="51A-123.45" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số bằng lái (GPLX)</label>
+                            <input type="text" name="LicenseNo" value="@(driver?.LicenseNo ?? "")"
+                                   class="form-control" placeholder="GPLX-..." />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Trạm trực / Bệnh viện phụ trách</label>
+                            <select name="Station" class="form-select">
+                                @{
+                                    string curStation = driver?.Station ?? "";
+                                    var stationList = new[] { "Bệnh viện Columbia Asia", "Trạm Bình Thạnh", "Trạm Quận 1", "Trạm Thủ Đức", "Trạm Gò Vấp" };
+                                }
+                                @foreach (var st in stationList)
+                                {
+                                    if (curStation == st)
+                                    {
+                                        <option value="@st" selected>@st</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@st">@st</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút hành động -->
+                <div class="d-flex gap-3 align-items-center mt-4 pt-3" style="border-top: 1px solid #2d3748;">
+                    <button type="submit" class="btn btn-save">
+                        <i class="fas fa-save me-2"></i>Lưu thay đổi
+                    </button>
+                    <a href="/Admin/UserManagement" class="btn-back">
+                        <i class="fas fa-arrow-left me-1"></i> Quay lại
+                    </a>
+                    @if (Model.Role != "ADMIN" || Model.Username?.ToLower() != "admin")
+                    {
+                        <button type="button" class="btn btn-sm ms-auto"
+                                style="background:#2d3748;color:#fc8181;border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:0.5rem 1rem;"
+                                onclick="confirmDelete(@Model.Id, '@Model.Username')">
+                            <i class="fas fa-trash me-1"></i> Xóa tài khoản
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function toggleDriverSection() {
+        const role = document.getElementById('roleSelect').value;
+        const section = document.getElementById('driverSection');
+        section.style.display = (role === 'DRIVER') ? 'block' : 'none';
+    }
+
+    async function confirmDelete(id, username) {
+        if (!confirm(`Bạn chắc chắn muốn XÓA tài khoản "${username}"?\nThao tác này không thể hoàn tác!`)) return;
+
+        try {
+            const res = await fetch(`/Admin/Delete/${id}`, { method: 'POST' });
+            if (res.ok) {
+                alert('Đã xóa tài khoản thành công!');
+                window.location.href = '/Admin/UserManagement';
+            } else {
+                const err = await res.text();
+                alert('Lỗi: ' + err);
+            }
+        } catch (e) {
+            alert('Lỗi kết nối server!');
+        }
+    }
+</script>
+}

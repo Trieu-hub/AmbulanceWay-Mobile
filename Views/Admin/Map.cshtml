@@ -1,0 +1,125 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Bản đồ giám sát toàn cảnh";
+    ViewData["Flush"] = true;
+}
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #1a202c;
+    }
+    #map-wrapper {
+        position: relative;
+        height: calc(100vh - var(--aw-topbar-h)); /* Bớt đi chiều cao thanh tiêu đề */
+        width: 100%;
+    }
+    #map-fullscreen {
+        height: 100%;
+        width: 100%;
+        background-color: #1a202c;
+    }
+    .map-overlay-card {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: rgba(26, 32, 44, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid #4a5568;
+        border-radius: 12px;
+        padding: 16px;
+        color: #e2e8f0;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        min-width: 250px;
+    }
+    .pulse-dot-green {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #48bb78;
+        box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7);
+        animation: pulseGreen 2s infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    @@keyframes pulseGreen {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(72, 187, 120, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
+    }
+</style>
+
+<div id="map-wrapper">
+    <!-- Thẻ thông tin nổi trên bản đồ -->
+    <div class="map-overlay-card">
+        <h5 class="fw-bold text-danger mb-2"><i class="fas fa-desktop"></i> MÀN HÌNH GIÁM SÁT 2</h5>
+        <div class="small text-secondary mb-3">Hệ thống theo dõi xe cấp cứu độc lập</div>
+        <hr style="border-color: #4a5568;" />
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span>Trạng thái kết nối:</span>
+            <span class="text-success"><span class="pulse-dot-green"></span>Online</span>
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+            <span>Số xe đang hoạt động:</span>
+            <span class="fw-bold text-info" id="active-count">0 xe</span>
+        </div>
+    </div>
+
+    <!-- Container bản đồ Leaflet -->
+    <div id="map-fullscreen" class="aw-dark-tiles"></div>
+</div>
+
+@section Scripts {
+    <script>
+        // 1. Khởi tạo bản đồ với theme tối sang trọng
+        var map = L.map('map-fullscreen', { zoomControl: false }).setView([10.776, 106.700], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        var driverMarkers = {};
+
+        // 2. Kết nối SignalR Hub
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl("/ambulanceHub")
+            .build();
+
+        // 3. Lắng nghe cập nhật tọa độ từ tài xế
+        connection.on("DriverLocationUpdate", function (data) {
+            console.log("Cập nhật vị trí tài xế:", data);
+            
+            // Icon xe cấp cứu màu xanh lá (online)
+            var driverIcon = L.divIcon({
+                className: 'driver-marker',
+                html: `<div style="background-color: #48bb78; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
+            if (driverMarkers[data.Username]) {
+                driverMarkers[data.Username].setLatLng([data.Lat, data.Lng]);
+            } else {
+                driverMarkers[data.Username] = L.marker([data.Lat, data.Lng], { icon: driverIcon })
+                    .addTo(map)
+                    .bindTooltip(data.Username, { permanent: false, direction: 'top' });
+            }
+            
+            // Cập nhật số lượng xe
+            document.getElementById('active-count').innerText = `${Object.keys(driverMarkers).length} xe`;
+        });
+
+        // 4. Khởi động SignalR và đăng ký làm Admin để nhận luồng tọa độ
+        connection.start()
+            .then(function () {
+                console.log("SignalR Connected on Screen 2!");
+                connection.invoke("RegisterAdmin");
+            })
+            .catch(err => console.error(err));
+    </script>
+}
