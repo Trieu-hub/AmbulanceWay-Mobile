@@ -36,13 +36,15 @@ Trên trình duyệt, hãy cho phép quyền vị trí khi được hỏi.
 |---|---|---|
 | Chrome / Windows trên cùng máy | `dotnet run --launch-profile http` | `http://localhost:5199` (mặc định) |
 | Máy ảo Android | `dotnet run --launch-profile http` | `http://10.0.2.2:5199` (mặc định trên Android) |
-| Điện thoại thật cùng Wi-Fi | `dotnet run --launch-profile lan` | `http://<IP máy tính>:5199` |
+| Điện thoại thật cùng Wi-Fi | `dotnet run --launch-profile lan` | `http://<IP máy tính>:5199` (backend in sẵn địa chỉ này khi chạy) |
 
 Đổi địa chỉ máy chủ bằng biểu tượng bánh răng ở màn hình chào; nút **Kiểm tra kết nối** cho biết địa chỉ có đúng không. Cũng có thể đặt sẵn lúc chạy:
 
 ```
 flutter run --dart-define=API_BASE_URL=http://192.168.1.10:5199
 ```
+
+Đừng build APK cho điện thoại với `API_BASE_URL=http://localhost:5199`: trên điện thoại, `localhost` là chính điện thoại chứ không phải máy tính chạy backend. App tự nhận biết máy ảo hay máy thật và hiện cảnh báo màu vàng khi địa chỉ đang dùng (`localhost`, `10.0.2.2`, `0.0.0.0`, thiếu cổng, `https://` ở cổng 5199...) không dùng được trên thiết bị đó.
 
 Profile `lan` cho backend nghe trên mọi địa chỉ mạng, nên mọi máy trong cùng Wi-Fi đều truy cập được (kể cả tài khoản `admin` / `123`). Chỉ dùng trong mạng tin cậy, và Windows có thể hỏi quyền tường lửa ở lần chạy đầu.
 

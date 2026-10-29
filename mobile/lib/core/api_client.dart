@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'server_address.dart';
+
 /// Lỗi khi gọi API, [message] đã là câu tiếng Việt hiển thị được cho người dùng.
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode});
@@ -93,14 +95,16 @@ class ApiClient {
     try {
       response = await request().timeout(timeout);
     } on TimeoutException {
-      throw ApiException('Máy chủ không phản hồi ($_baseUrl). Vui lòng thử lại.');
+      throw ApiException(_unreachable('Máy chủ không phản hồi ($_baseUrl).'));
     } on http.ClientException {
-      throw ApiException(
-          'Không kết nối được máy chủ ($_baseUrl). Kiểm tra mạng và địa chỉ máy chủ.');
+      throw ApiException(_unreachable('Không kết nối được máy chủ ($_baseUrl).'));
     } on FormatException {
-      throw ApiException('Địa chỉ máy chủ không hợp lệ ($_baseUrl).');
+      throw ApiException(_invalidAddress());
     } on ArgumentError {
-      throw ApiException('Địa chỉ máy chủ không hợp lệ ($_baseUrl).');
+      throw ApiException(_invalidAddress());
+    } on Exception {
+      // Ví dụ HandshakeException khi nhập https:// cho máy chủ chỉ chạy http://.
+      throw ApiException(_unreachable('Không kết nối được máy chủ ($_baseUrl).'));
     }
 
     final data = _decode(response);
@@ -115,6 +119,14 @@ class ApiClient {
       statusCode: response.statusCode,
     );
   }
+
+  /// Kèm lý do cụ thể nếu địa chỉ không dùng được trên thiết bị này
+  /// (ví dụ "localhost" trên điện thoại thật), không thì kèm các bước cần kiểm tra.
+  String _unreachable(String lead) =>
+      '$lead ${ServerAddress.problem(_baseUrl) ?? ServerAddress.connectionAdvice()}';
+
+  String _invalidAddress() =>
+      ServerAddress.problem(_baseUrl) ?? 'Địa chỉ máy chủ không hợp lệ ($_baseUrl).';
 
   static dynamic _decode(http.Response response) {
     if (response.bodyBytes.isEmpty) return null;

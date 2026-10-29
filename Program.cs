@@ -1,3 +1,4 @@
+using AmbulanceWay.Controllers.Api;
 using AmbulanceWay.Data;
 using AmbulanceWay.Models;
 using AmbulanceWay.Hubs;
@@ -6,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+
+// Cửa sổ console trên Windows mặc định không hiện được tiếng Việt có dấu.
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,4 +131,33 @@ Password = BCrypt.Net.BCrypt.HashPassword("123"), // admin password: 123
     }
 }
 
+// 9) Khi chạy xong: in địa chỉ để nhập vào app trên điện thoại thật, hoặc cảnh báo nếu backend
+//    chỉ nghe trên localhost (điện thoại không kết nối được dù nhập đúng IP).
+app.Lifetime.ApplicationStarted.Register(() => PrintPhoneAddresses(app));
+
 app.Run();
+
+static void PrintPhoneAddresses(WebApplication app)
+{
+    var lanPorts = MobileInfoController.LanHttpPorts(app.Urls);
+    if (lanPorts.Count == 0)
+    {
+        app.Logger.LogWarning(
+            "Backend chỉ nhận kết nối từ chính máy này ({Urls}). App trên ĐIỆN THOẠI THẬT sẽ không kết nối được. " +
+            "Muốn dùng điện thoại: chạy \"dotnet run --launch-profile lan\" (Visual Studio: chọn profile \"lan\" cạnh nút Run).",
+            string.Join(", ", app.Urls));
+        return;
+    }
+
+    var phoneUrls = MobileInfoController.PhoneUrls(lanPorts);
+    if (phoneUrls.Count == 0)
+    {
+        app.Logger.LogWarning("Không tìm thấy IP mạng LAN/Wi-Fi của máy này. Kiểm tra máy tính đã kết nối Wi-Fi chưa.");
+        return;
+    }
+
+    app.Logger.LogInformation(
+        "Điện thoại (cùng Wi-Fi với máy này) nhập địa chỉ máy chủ trong app: {PhoneUrls}. " +
+        "Không nhập localhost hay 0.0.0.0. Thử trước bằng trình duyệt điện thoại: <địa chỉ>/api/mobile/ping",
+        string.Join("  hoặc  ", phoneUrls));
+}

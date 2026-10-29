@@ -21,7 +21,11 @@ Nên chuẩn bị **2 điện thoại** (một đóng vai tài xế, một đón
    ```
    netsh advfirewall firewall add rule name="AmbulanceWay 5199" dir=in action=allow protocol=TCP localport=5199
    ```
-2. Tìm IP của laptop: chạy `ipconfig`, ở mục **Wireless LAN adapter Wi-Fi** lấy dòng **IPv4 Address**, ví dụ `192.168.1.10`.
+2. Tìm IP của laptop: ngay khi chạy xong, backend in sẵn dòng
+   `Điện thoại (cùng Wi-Fi với máy này) nhập địa chỉ máy chủ trong app: http://192.168.1.10:5199`.
+   Hoặc tự xem: chạy `ipconfig`, ở mục **Wireless LAN adapter Wi-Fi** lấy dòng **IPv4 Address**.
+   Nếu backend in cảnh báo `Backend chỉ nhận kết nối từ chính máy này` nghĩa là đang chạy nhầm profile `http` (Visual Studio: chọn profile **lan** cạnh nút Run).
+   **Không** nhập `localhost`, `127.0.0.1` hay `0.0.0.0` vào app trên điện thoại: `localhost` trên điện thoại là chính cái điện thoại, còn `0.0.0.0` chỉ là cách backend báo "nghe trên mọi mạng".
 3. Kiểm tra từ **trình duyệt trên điện thoại** (đang bắt cùng Wi-Fi): mở `http://192.168.1.10:5199/api/mobile/ping`.
    Thấy `{"ok":true,"app":"AmbulanceWay",...}` là điện thoại đã nói chuyện được với laptop.
    Không vào được thì kiểm tra lại: cùng Wi-Fi chưa, tường lửa, và Wi-Fi công cộng/trường học thường chặn các máy nhìn thấy nhau (dùng **điểm phát Wi-Fi từ điện thoại** cho laptop bắt là chắc ăn nhất).
@@ -120,6 +124,7 @@ Mẹo cho ảnh báo cáo đẹp và đồng đều:
 
 | Hiện tượng | Cách xử lý |
 |---|---|
+| Máy tính xin được OTP nhưng điện thoại báo lỗi có chữ `localhost` (hoặc `10.0.2.2`, `0.0.0.0`) | App trên điện thoại đang trỏ sai địa chỉ: `localhost` là chính điện thoại, `10.0.2.2` chỉ dùng cho máy ảo Android. Vào bánh răng → Cài đặt máy chủ, nhập `http://<IP laptop>:5199`. App tự cảnh báo màu vàng ở màn hình chào khi địa chỉ không dùng được trên thiết bị |
 | App báo không kết nối được máy chủ | Mở `http://<IP>:5199/api/mobile/ping` trên trình duyệt điện thoại. Không được: sai IP, khác Wi-Fi, tường lửa, hoặc backend đang chạy profile `http` thay vì `lan` |
 | IP laptop đổi sau khi khởi động lại Wi-Fi | Chạy lại `ipconfig`, sửa địa chỉ trong Cài đặt máy chủ của app |
 | Tài xế không nhận được SOS | Tài xế phải **Bắt đầu ca trực** và có vị trí (GPS hoặc mô phỏng) trong bán kính 5 km quanh bệnh nhân. Không ai trong 5 km thì máy chủ gửi cho mọi tài xế đang trực |

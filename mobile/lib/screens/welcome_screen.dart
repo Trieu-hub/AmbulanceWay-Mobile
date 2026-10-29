@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../app.dart';
 import '../core/app_config.dart';
+import '../core/server_address.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 import 'driver/driver_login_screen.dart';
@@ -37,6 +38,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final theme = Theme.of(context);
+    final addressProblem = ServerAddress.problem(app.baseUrl);
 
     return Scaffold(
       body: DecoratedBox(
@@ -129,15 +131,75 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
-                child: Text(
-                  'Máy chủ: ${app.baseUrl}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+              // Ví dụ "localhost" trên điện thoại thật: báo ngay, đừng đợi tới lúc xin OTP mới lỗi.
+              // Lý do chi tiết hiện ở màn hình Cài đặt máy chủ.
+              if (addressProblem != null)
+                _ServerProblemBar(
+                  baseUrl: app.baseUrl,
+                  onTap: () => _open(const ServerSettingsScreen()),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+                  child: Text(
+                    'Máy chủ: ${app.baseUrl}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
                 ),
-              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dòng cảnh báo cuối màn hình chào khi địa chỉ máy chủ không dùng được trên thiết bị này.
+class _ServerProblemBar extends StatelessWidget {
+  const _ServerProblemBar({required this.baseUrl, required this.onTap});
+
+  final String baseUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Material(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Máy chủ $baseUrl không dùng được trên thiết bị này',
+                        style: const TextStyle(color: Color(0xFF4E342E), fontSize: 12),
+                      ),
+                      const Text(
+                        'Bấm để sửa địa chỉ máy chủ',
+                        style: TextStyle(
+                          color: Color(0xFFBF360C),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFFBF360C)),
+              ],
+            ),
           ),
         ),
       ),

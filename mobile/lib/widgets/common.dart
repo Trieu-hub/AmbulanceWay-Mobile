@@ -10,6 +10,8 @@ void showAppSnack(BuildContext context, String message, {bool isError = false}) 
     ..showSnackBar(SnackBar(
       content: Text(message),
       behavior: SnackBarBehavior.floating,
+      // Câu báo lỗi kết nối có kèm hướng dẫn khá dài: giữ lâu hơn cho kịp đọc.
+      duration: Duration(milliseconds: (3000 + message.length * 40).clamp(4000, 12000)),
       backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
     ));
 }
@@ -106,6 +108,33 @@ class InfoRow extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Khung cảnh báo màu vàng (ví dụ địa chỉ máy chủ không dùng được trên thiết bị này).
+class WarningBox extends StatelessWidget {
+  const WarningBox({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFB300)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message, style: const TextStyle(color: Color(0xFF4E342E)))),
         ],
       ),
     );
