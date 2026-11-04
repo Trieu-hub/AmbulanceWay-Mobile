@@ -29,7 +29,7 @@ class PatientController extends ChangeNotifier {
     this.notifier = const NoopNotifier(),
   })  : _api = PatientApi(api),
         _baseUrl = api.baseUrl,
-        _hubFactory = hubFactory ?? HubClient.new;
+        _hubFactory = hubFactory ?? ((url) => HubClient(url, currentBaseUrl: () => api.baseUrl));
 
   final PatientApi _api;
   final String _baseUrl;

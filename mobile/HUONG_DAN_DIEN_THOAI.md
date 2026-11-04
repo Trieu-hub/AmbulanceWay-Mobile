@@ -57,7 +57,8 @@ Build lại khi có sửa code: trong thư mục `mobile/` chạy `flutter build
 ## Bước 3. Trỏ app tới laptop và cấp quyền
 
 1. Mở app → màn hình chào → biểu tượng **bánh răng** (Cài đặt máy chủ).
-2. Nhập `http://192.168.1.10:5199` (IP ở Bước 1) → **Kiểm tra kết nối** → **Lưu**.
+2. Bấm **Tự tìm máy chủ trong Wi-Fi** (app quét mạng đang dùng và tự lưu), hoặc nhập `http://192.168.1.10:5199` (IP ở Bước 1) → **Kiểm tra kết nối** (kết nối được là tự lưu).
+   Kiểm tra dòng "Máy chủ: …" ở cuối màn hình chào đúng IP mới. Khi IP laptop đổi (đổi Wi-Fi, bật lại điểm phát), app tự tìm lại máy chủ lúc mở app hoặc khi mất kết nối.
 3. Cấp quyền khi app hỏi:
    - **Vị trí: "Khi dùng ứng dụng"**: bắt buộc để gửi SOS và để tài xế chia sẻ vị trí.
    - **Thông báo**: để nhận ca SOS mới / trạng thái ca khi app chạy nền.
@@ -126,7 +127,8 @@ Mẹo cho ảnh báo cáo đẹp và đồng đều:
 |---|---|
 | Máy tính xin được OTP nhưng điện thoại báo lỗi có chữ `localhost` (hoặc `10.0.2.2`, `0.0.0.0`) | App trên điện thoại đang trỏ sai địa chỉ: `localhost` là chính điện thoại, `10.0.2.2` chỉ dùng cho máy ảo Android. Vào bánh răng → Cài đặt máy chủ, nhập `http://<IP laptop>:5199`. App tự cảnh báo màu vàng ở màn hình chào khi địa chỉ không dùng được trên thiết bị |
 | App báo không kết nối được máy chủ | Mở `http://<IP>:5199/api/mobile/ping` trên trình duyệt điện thoại. Không được: sai IP, khác Wi-Fi, tường lửa, hoặc backend đang chạy profile `http` thay vì `lan` |
-| IP laptop đổi sau khi khởi động lại Wi-Fi | Chạy lại `ipconfig`, sửa địa chỉ trong Cài đặt máy chủ của app |
+| Chrome trên điện thoại ping được nhưng app báo "Máy chủ không phản hồi (http://<IP cũ>:5199)" | App đang giữ IP cũ của laptop (ví dụ IP Wi-Fi trường trong khi laptop đã chuyển sang điểm phát). Bản mới tự tìm lại; nếu chưa, vào bánh răng → **Tự tìm máy chủ trong Wi-Fi**. Nhìn kỹ IP trong câu báo lỗi có trùng IP backend in ra không |
+| IP laptop đổi sau khi khởi động lại Wi-Fi | App tự tìm lại máy chủ. Hoặc bánh răng → **Tự tìm máy chủ trong Wi-Fi** / nhập IP mới backend in ra |
 | Tài xế không nhận được SOS | Tài xế phải **Bắt đầu ca trực** và có vị trí (GPS hoặc mô phỏng) trong bán kính 5 km quanh bệnh nhân. Không ai trong 5 km thì máy chủ gửi cho mọi tài xế đang trực |
 | Không có thông báo khi tắt màn hình | Kiểm tra đã cấp quyền Thông báo, pin "Không hạn chế", và tài xế đang trực có GPS (dịch vụ nền chạy theo GPS) |
 | Bản đồ trắng / không vẽ được đường | Điện thoại cần Internet để tải bản đồ OpenStreetMap và tìm đường OSRM. Không có thì app vẽ đường thẳng nét đứt |

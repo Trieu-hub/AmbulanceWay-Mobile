@@ -19,6 +19,10 @@ class ServerSettingsScreen extends StatefulWidget {
 class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   late final TextEditingController _url;
   bool _testing = false;
+  bool _finding = false;
+
+  /// Người dùng đã chọn "Bỏ thay đổi": cho rời màn hình mà không hỏi lại.
+  bool _leaving = false;
   String? _result;
   bool _resultOk = false;
 
@@ -47,13 +51,11 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   }
 
   void _onUrlChanged() {
-    final problem = ServerAddress.problem(_url.text);
-    if (problem != _problem || _result != null) {
-      setState(() {
-        _problem = problem;
-        _result = null;
-      });
-    }
+    // Luôn vẽ lại: trạng thái "chưa lưu" (hỏi trước khi thoát) đổi theo từng ký tự.
+    setState(() {
+      _problem = ServerAddress.problem(_url.text);
+      _result = null;
+    });
   }
 
   void _fill(String value) {
@@ -80,7 +82,15 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           : 'Địa chỉ này không phải máy chủ AmbulanceWay.';
       final lan = data?.raw('lanUrls');
       if (ok && lan is List) _lanUrls = lan.whereType<String>().toList();
-      _phoneReachable = data?.has('phoneReachable') == true ? data!.boolean('phoneReachable') : null;
+      _phoneReachable = data?.has('phoneReachable') == true
+          ? data!.boolean('phoneReachable')
+          : null;
+      // Kết nối được thì lưu luôn: trước đây người dùng hay bấm Kiểm tra rồi quay lại, quên bấm Lưu,
+      // nên app vẫn gọi địa chỉ cũ và báo "Máy chủ không phản hồi".
+      if (ok && mounted) {
+        await context.read<AppState>().setBaseUrl(probe.baseUrl);
+        _result = 'Kết nối thành công tới ${probe.baseUrl}. Đã lưu địa chỉ này.';
+      }
     } on ApiException catch (error) {
       _resultOk = false;
       _result = error.statusCode == 404
@@ -91,6 +101,27 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     }
     if (mounted) setState(() => _testing = false);
     return _resultOk;
+  }
+
+  /// Quét mạng Wi-Fi đang dùng tìm máy tính chạy backend, thấy thì điền và lưu luôn.
+  Future<void> _find() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _finding = true;
+      _result = null;
+      _lanUrls = const [];
+      _phoneReachable = null;
+    });
+    final found = await context.read<AppState>().rediscoverServer(force: true);
+    if (!mounted) return;
+    if (found != null) _fill(found);
+    setState(() {
+      _finding = false;
+      _resultOk = found != null;
+      _result = found != null
+          ? 'Đã tìm thấy máy chủ tại $found và lưu địa chỉ này.'
+          : 'Không tìm thấy máy chủ trong mạng Wi-Fi này. ${ServerAddress.connectionAdvice()}';
+    });
   }
 
   Future<void> _save() async {
@@ -133,7 +164,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     final phoneHint = _Hint(
       title: 'Điện thoại thật (cùng mạng Wi-Fi với máy tính)',
       value: 'http://<IP Wi-Fi của máy tính>:5199',
-      note: 'Máy tính chạy backend bằng: dotnet run --launch-profile lan. '
+      note:
+          'Máy tính chạy backend bằng: dotnet run --launch-profile lan. '
           'Xem IP bằng lệnh ipconfig (dòng IPv4 Address). Không dùng localhost hay 0.0.0.0.',
       highlighted: device.maybePhysicalPhone,
     );
@@ -158,76 +190,139 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       hints.add(phoneHint);
     }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Cài đặt máy chủ')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          TextField(
-            controller: _url,
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            decoration: const InputDecoration(
-              labelText: 'Địa chỉ máy chủ',
-              hintText: 'http://192.168.1.10:5199',
-              prefixIcon: Icon(Icons.dns),
+    final app = context.watch<AppState>();
+    final unsaved =
+        !_leaving &&
+        _url.text.trim().isNotEmpty &&
+        ApiClient.normalizeBaseUrl(_url.text) != app.baseUrl;
+
+    return PopScope(
+      canPop: !unsaved,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Cài đặt máy chủ')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            TextField(
+              controller: _url,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Địa chỉ máy chủ',
+                hintText: 'http://192.168.1.10:5199',
+                prefixIcon: Icon(Icons.dns),
+              ),
             ),
+            const SizedBox(height: 12),
+            if (_problem != null && _url.text.trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: WarningBox(message: _problem!),
+              ),
+            if (_result != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _resultOk ? Icons.check_circle : Icons.error,
+                      color: _resultOk ? Colors.green : theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_result!)),
+                  ],
+                ),
+              ),
+            if (_resultOk && _result != null && _phoneReachable == false)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: WarningBox(
+                  message:
+                      'Backend đang chỉ nhận kết nối từ chính máy tính này, điện thoại thật sẽ '
+                      'không vào được. Muốn dùng điện thoại, chạy backend bằng: '
+                      'dotnet run --launch-profile lan',
+                ),
+              )
+            else if (_resultOk &&
+                _result != null &&
+                _lanUrls.isNotEmpty &&
+                !device.maybePhysicalPhone)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Trên điện thoại thật (cùng Wi-Fi) nhập: ${_lanUrls.join('  hoặc  ')}',
+                  style: TextStyle(color: theme.hintColor),
+                ),
+              ),
+            OutlinedButton.icon(
+              onPressed: _testing || _finding ? null : _test,
+              icon: _testing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.wifi_tethering),
+              label: const Text('Kiểm tra kết nối'),
+            ),
+            if (app.canDiscover) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _testing || _finding ? null : _find,
+                icon: _finding
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.travel_explore),
+                label: Text(
+                  _finding ? 'Đang tìm trong mạng Wi-Fi...' : 'Tự tìm máy chủ trong Wi-Fi',
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            PrimaryButton(label: 'Lưu', icon: Icons.save, onPressed: _save),
+            const SizedBox(height: 28),
+            Text('Nhập địa chỉ nào?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...hints,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Rời màn hình khi địa chỉ đang gõ khác địa chỉ đã lưu: hỏi có lưu không.
+  Future<void> _confirmLeave() async {
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chưa lưu địa chỉ mới'),
+        content: Text(
+          'Địa chỉ ${ApiClient.normalizeBaseUrl(_url.text)} chưa được lưu. '
+          'Không lưu thì app vẫn dùng địa chỉ cũ.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Bỏ thay đổi'),
           ),
-          const SizedBox(height: 12),
-          if (_problem != null && _url.text.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: WarningBox(message: _problem!),
-            ),
-          if (_result != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    _resultOk ? Icons.check_circle : Icons.error,
-                    color: _resultOk ? Colors.green : theme.colorScheme.error,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_result!)),
-                ],
-              ),
-            ),
-          if (_resultOk && _result != null && _phoneReachable == false)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: WarningBox(
-                message: 'Backend đang chỉ nhận kết nối từ chính máy tính này, điện thoại thật sẽ '
-                    'không vào được. Muốn dùng điện thoại, chạy backend bằng: '
-                    'dotnet run --launch-profile lan',
-              ),
-            )
-          else if (_resultOk && _result != null && _lanUrls.isNotEmpty && !device.maybePhysicalPhone)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                'Trên điện thoại thật (cùng Wi-Fi) nhập: ${_lanUrls.join('  hoặc  ')}',
-                style: TextStyle(color: theme.hintColor),
-              ),
-            ),
-          OutlinedButton.icon(
-            onPressed: _testing ? null : _test,
-            icon: _testing
-                ? const SizedBox(
-                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.wifi_tethering),
-            label: const Text('Kiểm tra kết nối'),
-          ),
-          const SizedBox(height: 12),
-          PrimaryButton(label: 'Lưu', icon: Icons.save, onPressed: _save),
-          const SizedBox(height: 28),
-          Text('Nhập địa chỉ nào?', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...hints,
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Lưu')),
         ],
       ),
     );
+    if (!mounted || save == null) return;
+    if (save) {
+      await _save();
+    } else {
+      _leaving = true;
+      Navigator.of(context).pop();
+    }
   }
 }
 
@@ -277,13 +372,18 @@ class _Hint extends StatelessWidget {
                     Flexible(
                       child: Text(
                         value,
-                        style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     if (tap != null) ...[
                       const SizedBox(width: 6),
-                      Text('Bấm để điền',
-                          style: TextStyle(color: theme.colorScheme.primary, fontSize: 12)),
+                      Text(
+                        'Bấm để điền',
+                        style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
+                      ),
                     ],
                   ],
                 ),

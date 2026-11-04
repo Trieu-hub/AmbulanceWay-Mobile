@@ -13,10 +13,15 @@ enum HubStatus { disconnected, connecting, connected }
 /// Tự kết nối lại khi rớt mạng và gọi [onConnected] sau mỗi lần nối được,
 /// vì máy chủ quên các đăng ký (RegisterDriver, JoinCase) khi kết nối cũ mất.
 class HubClient {
-  HubClient(String baseUrl)
-      : _url = '${ApiClient.normalizeBaseUrl(baseUrl)}${AppConfig.hubPath}';
+  /// [currentBaseUrl]: đọc lại địa chỉ máy chủ mỗi lần kết nối lại, để khi app tự chuyển sang
+  /// IP mới của máy tính (đổi Wi-Fi) thì kết nối realtime cũng theo sang.
+  HubClient(String baseUrl, {this._currentBaseUrl}) : _baseUrl = baseUrl;
 
-  final String _url;
+  final String _baseUrl;
+  final String Function()? _currentBaseUrl;
+
+  String get _url =>
+      '${ApiClient.normalizeBaseUrl(_currentBaseUrl?.call() ?? _baseUrl)}${AppConfig.hubPath}';
   final Map<String, void Function(Object? payload)> _handlers = {};
 
   HubConnection? _connection;

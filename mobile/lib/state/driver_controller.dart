@@ -52,7 +52,7 @@ class DriverController extends ChangeNotifier {
         _baseUrl = api.baseUrl,
         _routing = routing ?? RoutingService(),
         _location = location ?? LocationService(),
-        _hubFactory = hubFactory ?? HubClient.new;
+        _hubFactory = hubFactory ?? ((url) => HubClient(url, currentBaseUrl: () => api.baseUrl));
 
   final DriverApi _api;
   final String _baseUrl;

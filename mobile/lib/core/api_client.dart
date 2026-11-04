@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'http_client_stub.dart' if (dart.library.io) 'http_client_io.dart';
 import 'server_address.dart';
 
 /// Lỗi khi gọi API, [message] đã là câu tiếng Việt hiển thị được cho người dùng.
@@ -24,7 +25,7 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient({required String baseUrl, http.Client? httpClient})
       : _baseUrl = normalizeBaseUrl(baseUrl),
-        _http = httpClient ?? http.Client();
+        _http = httpClient ?? createHttpClient();
 
   static const Duration timeout = Duration(seconds: 15);
 
@@ -36,6 +37,10 @@ class ApiClient {
 
   /// Được gọi khi máy chủ từ chối token (hết hạn, tài khoản bị khóa).
   void Function()? onSessionRejected;
+
+  /// Được gọi khi không kết nối được máy chủ; có thể đổi [baseUrl] sang máy chủ vừa tìm thấy,
+  /// khi đó request được gửi lại tới địa chỉ mới.
+  Future<void> Function()? onUnreachable;
 
   String get baseUrl => _baseUrl;
 
@@ -89,22 +94,26 @@ class ApiClient {
             body: fields,
           ));
 
-  Future<dynamic> _send(Future<http.Response> Function() request) async {
+  Future<dynamic> _send(Future<http.Response> Function() request, {bool retried = false}) async {
     final sentToken = token;
+    final sentTo = _baseUrl;
     http.Response response;
     try {
       response = await request().timeout(timeout);
-    } on TimeoutException {
-      throw ApiException(_unreachable('Máy chủ không phản hồi ($_baseUrl).'));
-    } on http.ClientException {
-      throw ApiException(_unreachable('Không kết nối được máy chủ ($_baseUrl).'));
     } on FormatException {
       throw ApiException(_invalidAddress());
     } on ArgumentError {
       throw ApiException(_invalidAddress());
-    } on Exception {
-      // Ví dụ HandshakeException khi nhập https:// cho máy chủ chỉ chạy http://.
-      throw ApiException(_unreachable('Không kết nối được máy chủ ($_baseUrl).'));
+    } on Exception catch (error) {
+      // TimeoutException, ClientException, hoặc ví dụ HandshakeException khi nhập https://
+      // cho máy chủ chỉ chạy http://.
+      // IP máy tính chạy backend đổi (đổi Wi-Fi, bật lại điểm phát): tìm lại máy chủ rồi gửi lại
+      // đúng một lần. Chỉ gửi lại khi máy chủ đã chuyển sang địa chỉ khác, nên request cũ chắc chắn
+      // chưa tới máy chủ (không sợ tạo trùng SOS, trùng OTP).
+      if (!retried && await _serverMoved(sentTo)) return _send(request, retried: true);
+      throw ApiException(_unreachable(error is TimeoutException
+          ? 'Máy chủ không phản hồi ($sentTo).'
+          : 'Không kết nối được máy chủ ($sentTo).'));
     }
 
     final data = _decode(response);
@@ -118,6 +127,17 @@ class ApiClient {
       errorMessage(data, response.statusCode),
       statusCode: response.statusCode,
     );
+  }
+
+  Future<bool> _serverMoved(String sentTo) async {
+    final findServer = onUnreachable;
+    if (findServer == null) return false;
+    try {
+      await findServer();
+    } on Exception {
+      return false;
+    }
+    return _baseUrl != sentTo;
   }
 
   /// Kèm lý do cụ thể nếu địa chỉ không dùng được trên thiết bị này

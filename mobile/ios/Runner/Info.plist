@@ -49,6 +49,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>AmbulanceWay dùng vị trí để điều xe cấp cứu tới đúng nơi và hiển thị xe trên bản đồ.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Tìm máy tính chạy máy chủ AmbulanceWay trong cùng mạng Wi-Fi.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Backend chạy thử bằng HTTP trong mạng nội bộ; bỏ khi triển khai qua HTTPS. -->

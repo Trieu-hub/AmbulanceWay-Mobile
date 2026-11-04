@@ -8,13 +8,19 @@ import 'screens/driver/driver_shell.dart';
 import 'screens/patient/patient_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'services/notification_service.dart';
+import 'services/server_discovery.dart';
 import 'state/app_state.dart';
 
 /// Màu chủ đạo, trùng màu đỏ của bản web.
 const Color kBrandRed = Color(0xFFD32F2F);
 
 class AmbulanceWayApp extends StatelessWidget {
-  const AmbulanceWayApp({super.key, this.appState, this.notifier = const NoopNotifier()});
+  const AmbulanceWayApp({
+    super.key,
+    this.appState,
+    this.notifier = const NoopNotifier(),
+    this.discovery,
+  });
 
   /// Cho phép test truyền sẵn trạng thái; bình thường app tự tạo và đọc dữ liệu đã lưu.
   final AppState? appState;
@@ -22,12 +28,17 @@ class AmbulanceWayApp extends StatelessWidget {
   /// Thông báo hệ thống khi app chạy nền (main() truyền bản thật, test dùng bản rỗng).
   final AppNotifier notifier;
 
+  /// Tự tìm lại máy chủ khi IP máy tính đổi (main() bật trên điện thoại; null thì không tìm).
+  final ServerDiscovery? discovery;
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         Provider<AppNotifier>.value(value: notifier),
-        ChangeNotifierProvider<AppState>(create: (_) => appState ?? (AppState()..load())),
+        ChangeNotifierProvider<AppState>(
+          create: (_) => appState ?? (AppState(discovery: discovery)..load()),
+        ),
       ],
       child: MaterialApp(
         title: 'AmbulanceWay',
